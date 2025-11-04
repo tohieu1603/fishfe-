@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,10 +12,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2 } from "lucide-react";
-import { orderApi } from "@/lib/api";
+import { Plus, Trash2, Search, X } from "lucide-react";
+import { orderApi, authApi } from "@/lib/api";
 import { toast } from "sonner";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
+import { User } from "@/types";
 
 interface CreateOrderDialogProps {
   open: boolean;
@@ -61,6 +62,72 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess }: CreateOrder
   const [taskDescription, setTaskDescription] = useState("");
   const [attachments, setAttachments] = useState<File[]>([]);
 
+  // Employee assignment states
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+
+  // Load users when dialog opens
+  useEffect(() => {
+    if (open) {
+      loadUsers();
+      // Auto-select current user
+      const currentUser = localStorage.getItem("current_user");
+      if (currentUser) {
+        const userId = JSON.parse(currentUser).id;
+        setSelectedUserIds([userId]);
+      }
+    }
+  }, [open]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.user-search-container')) {
+        setShowUserDropdown(false);
+      }
+    };
+
+    if (showUserDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showUserDropdown]);
+
+  const loadUsers = async () => {
+    try {
+      const users = await authApi.getUsers();
+      setAllUsers(users);
+    } catch (error) {
+      console.error("Failed to load users:", error);
+      toast.error("Không thể tải danh sách nhân viên");
+    }
+  };
+
+  const toggleUserSelection = (userId: number) => {
+    setSelectedUserIds((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  const removeSelectedUser = (userId: number) => {
+    setSelectedUserIds((prev) => prev.filter((id) => id !== userId));
+  };
+
+  const filteredUsers = allUsers.filter((user) =>
+    user.full_name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+    user.username.toLowerCase().includes(userSearchQuery.toLowerCase())
+  );
+
+  const selectedUsers = allUsers.filter((user) => selectedUserIds.includes(user.id));
+
   const addItem = () => {
     setItems([...items, { product_name: "", quantity: 1, unit: "kg", price: 0 }]);
   };
@@ -97,10 +164,6 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess }: CreateOrder
     setIsLoading(true);
 
     try {
-      // Get current user from localStorage to auto-assign
-      const currentUser = localStorage.getItem("current_user");
-      const currentUserId = currentUser ? JSON.parse(currentUser).id : null;
-
       const input = {
         customer_name: customerName,
         customer_phone: customerPhone,
@@ -116,7 +179,7 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess }: CreateOrder
         chip_fee: 0,
         notes: notes || undefined,
         delivery_time: deliveryTime || undefined,
-        assigned_to_ids: currentUserId ? [currentUserId] : [],
+        assigned_to_ids: selectedUserIds,
       };
 
       console.log("Creating order with input:", input);
@@ -152,6 +215,16 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess }: CreateOrder
     setWarningMinutes(5);
     setTaskDescription("");
     setAttachments([]);
+    setUserSearchQuery("");
+    setShowUserDropdown(false);
+    // Reset to current user
+    const currentUser = localStorage.getItem("current_user");
+    if (currentUser) {
+      const userId = JSON.parse(currentUser).id;
+      setSelectedUserIds([userId]);
+    } else {
+      setSelectedUserIds([]);
+    }
   };
 
   return (
@@ -207,6 +280,94 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess }: CreateOrder
               onChange={setCustomerAddress}
               required
             />
+          </div>
+
+          {/* Assign Employees */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-base">Phân công nhân viên</h3>
+
+            {/* Selected users display */}
+            {selectedUsers.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedUsers.map((user) => (
+                  <div
+                    key={user.id}
+                    className="inline-flex items-center gap-1.5 bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full text-sm"
+                  >
+                    <span>{user.full_name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeSelectedUser(user.id)}
+                      className="hover:bg-blue-200 rounded-full p-0.5 transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Search input */}
+            <div className="relative user-search-container">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Tìm kiếm nhân viên theo tên..."
+                  value={userSearchQuery}
+                  onChange={(e) => setUserSearchQuery(e.target.value)}
+                  onFocus={() => setShowUserDropdown(true)}
+                  className="pl-9 h-9 text-sm"
+                />
+              </div>
+
+              {/* Dropdown list */}
+              {showUserDropdown && filteredUsers.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {filteredUsers.map((user) => {
+                    const isSelected = selectedUserIds.includes(user.id);
+                    return (
+                      <button
+                        key={user.id}
+                        type="button"
+                        onClick={() => {
+                          toggleUserSelection(user.id);
+                          setUserSearchQuery("");
+                          setShowUserDropdown(false);
+                        }}
+                        className={`w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors flex items-center justify-between ${
+                          isSelected ? "bg-blue-50" : ""
+                        }`}
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {user.full_name}
+                          </p>
+                          <p className="text-xs text-gray-500">@{user.username}</p>
+                        </div>
+                        {isSelected && (
+                          <div className="h-5 w-5 rounded-full bg-blue-600 flex items-center justify-center">
+                            <svg
+                              className="h-3 w-3 text-white"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Products */}

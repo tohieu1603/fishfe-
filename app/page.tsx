@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { Plus, Search, ChevronDown, User, Filter, ChevronRight, Check } from "lucide-react";
+import { Plus, Search, ChevronDown, User, ChevronRight, Check, Calendar, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -46,6 +46,9 @@ function HomePage() {
     order: Order;
     newStatus: OrderStatus;
   } | null>(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+  const kanbanScrollRef = useRef<HTMLDivElement>(null);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -151,6 +154,31 @@ function HomePage() {
     return () => clearTimeout(timer);
   };
 
+  const checkScrollButtons = () => {
+    if (kanbanScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = kanbanScrollRef.current;
+      setShowLeftArrow(scrollLeft > 0);
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  };
+
+  const scrollKanban = (direction: 'left' | 'right') => {
+    if (kanbanScrollRef.current) {
+      const scrollAmount = 400;
+      kanbanScrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  useEffect(() => {
+    checkScrollButtons();
+    const handleResize = () => checkScrollButtons();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Group orders by status
   const ordersByStatus = PROCESS_STAGES.reduce(
     (acc, stage) => {
@@ -200,73 +228,158 @@ function HomePage() {
           <OverdueOrdersAlert orders={orders} />
 
           {/* Filters */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 md:h-4 md:w-4 text-gray-400" />
-              <Input
-                placeholder="Tìm đơn hàng..."
-                value={localSearch}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-8 md:pl-9 h-9 md:h-10 text-sm"
-              />
-            </div>
-
-            {/* Status Filter Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="min-w-[140px] justify-between hidden md:flex">
-                  {filters.status
-                    ? PROCESS_STAGES.find((s) => s.status === filters.status)?.label
-                    : "Tất cả trạng thái"}
-                  <ChevronDown className="h-4 w-4 ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem
-                  onClick={() => setFilters({ ...filters, status: undefined })}
-                  className="cursor-pointer"
-                >
-                  <Check
-                    className={`mr-2 h-4 w-4 ${!filters.status ? "opacity-100" : "opacity-0"}`}
+          <div className="overflow-x-auto">
+            <div className="flex items-center gap-2 min-w-max pb-2">
+                <div className="w-[250px] md:w-[300px] relative shrink-0">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 md:h-4 md:w-4 text-gray-400" />
+                  <Input
+                    placeholder="Tìm đơn hàng..."
+                    value={localSearch}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="pl-8 md:pl-9 h-9 md:h-10 text-sm"
                   />
-                  Tất cả trạng thái
-                </DropdownMenuItem>
-                {PROCESS_STAGES.map((stage) => (
-                  <DropdownMenuItem
-                    key={stage.status}
-                    onClick={() => setFilters({ ...filters, status: stage.status })}
-                    className="cursor-pointer"
-                  >
-                    <Check
-                      className={`mr-2 h-4 w-4 ${
-                        filters.status === stage.status ? "opacity-100" : "opacity-0"
-                      }`}
-                    />
-                    {stage.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </div>
 
-            <Button
-              variant={filters.myOrders ? "default" : "outline"}
-              onClick={() => setFilters({ ...filters, myOrders: !filters.myOrders })}
-              size="sm"
-              className="hidden sm:flex"
-            >
-              <User className="h-4 w-4 mr-2" />
-              Đơn của tôi
-            </Button>
+                {/* Date Filter */}
+                <div className="flex items-center gap-1 shrink-0">
+                  <Input
+                    type="date"
+                    value={filters.dateFrom || ""}
+                    onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+                    className="h-9 md:h-10 w-[140px] text-sm"
+                    placeholder="Từ ngày"
+                  />
+                  <span className="text-gray-500 text-sm">-</span>
+                  <Input
+                    type="date"
+                    value={filters.dateTo || ""}
+                    onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+                    className="h-9 md:h-10 w-[140px] text-sm"
+                    placeholder="Đến ngày"
+                  />
+                </div>
 
-            {/* Mobile: Show only filter icon */}
-            <Button variant="outline" size="sm" className="md:hidden shrink-0">
-              <Filter className="h-4 w-4" />
-            </Button>
+                {/* Quick Date Filter */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="shrink-0">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      {filters.dateFrom || filters.dateTo ? "Đã lọc" : "Lọc nhanh"}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const today = new Date().toISOString().split('T')[0];
+                        setFilters({ ...filters, dateFrom: today, dateTo: today });
+                      }}
+                      className="cursor-pointer"
+                    >
+                      Hôm nay
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const today = new Date();
+                        const yesterday = new Date(today);
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        const dateStr = yesterday.toISOString().split('T')[0];
+                        setFilters({ ...filters, dateFrom: dateStr, dateTo: dateStr });
+                      }}
+                      className="cursor-pointer"
+                    >
+                      Hôm qua
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const today = new Date();
+                        const weekAgo = new Date(today);
+                        weekAgo.setDate(weekAgo.getDate() - 7);
+                        setFilters({
+                          ...filters,
+                          dateFrom: weekAgo.toISOString().split('T')[0],
+                          dateTo: today.toISOString().split('T')[0]
+                        });
+                      }}
+                      className="cursor-pointer"
+                    >
+                      7 ngày qua
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const today = new Date();
+                        const monthAgo = new Date(today);
+                        monthAgo.setDate(monthAgo.getDate() - 30);
+                        setFilters({
+                          ...filters,
+                          dateFrom: monthAgo.toISOString().split('T')[0],
+                          dateTo: today.toISOString().split('T')[0]
+                        });
+                      }}
+                      className="cursor-pointer"
+                    >
+                      30 ngày qua
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setFilters({ ...filters, dateFrom: undefined, dateTo: undefined })}
+                      className="cursor-pointer text-red-600"
+                    >
+                      Xóa bộ lọc
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Status Filter Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="min-w-[140px] justify-between shrink-0">
+                      {filters.status
+                        ? PROCESS_STAGES.find((s) => s.status === filters.status)?.label
+                        : "Tất cả trạng thái"}
+                      <ChevronDown className="h-4 w-4 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem
+                      onClick={() => setFilters({ ...filters, status: undefined })}
+                      className="cursor-pointer"
+                    >
+                      <Check
+                        className={`mr-2 h-4 w-4 ${!filters.status ? "opacity-100" : "opacity-0"}`}
+                      />
+                      Tất cả trạng thái
+                    </DropdownMenuItem>
+                    {PROCESS_STAGES.map((stage) => (
+                      <DropdownMenuItem
+                        key={stage.status}
+                        onClick={() => setFilters({ ...filters, status: stage.status })}
+                        className="cursor-pointer"
+                      >
+                        <Check
+                          className={`mr-2 h-4 w-4 ${
+                            filters.status === stage.status ? "opacity-100" : "opacity-0"
+                          }`}
+                        />
+                        {stage.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <Button
+                  variant={filters.myOrders ? "default" : "outline"}
+                  onClick={() => setFilters({ ...filters, myOrders: !filters.myOrders })}
+                  size="sm"
+                  className="shrink-0"
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  Đơn của tôi
+                </Button>
+            </div>
           </div>
         </div>
 
         {/* Kanban Board - Desktop only, hidden on mobile */}
-        <div className="flex-1 overflow-hidden hidden md:block">
+        <div className="flex-1 overflow-hidden hidden md:block relative">
           {isLoading ? (
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
@@ -275,18 +388,46 @@ function HomePage() {
               </div>
             </div>
           ) : (
-            <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-4 h-full">
-              {PROCESS_STAGES.map((stage) => (
-                <ProcessColumn
-                  key={stage.status}
-                  stage={stage}
-                  orders={ordersByStatus[stage.status] || []}
-                  onOrderClick={handleOrderClick}
-                  onOrderDrop={handleOrderDrop}
-                  onOrderTransition={handleOrderTransition}
-                />
-              ))}
-            </div>
+            <>
+              {/* Left scroll button */}
+              {showLeftArrow && (
+                <button
+                  onClick={() => scrollKanban('left')}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-white shadow-lg rounded-full p-2 hover:bg-gray-100 transition-colors"
+                  aria-label="Scroll left"
+                >
+                  <ChevronLeft className="h-5 w-5 text-gray-600" />
+                </button>
+              )}
+
+              {/* Right scroll button */}
+              {showRightArrow && (
+                <button
+                  onClick={() => scrollKanban('right')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-white shadow-lg rounded-full p-2 hover:bg-gray-100 transition-colors"
+                  aria-label="Scroll right"
+                >
+                  <ChevronRight className="h-5 w-5 text-gray-600" />
+                </button>
+              )}
+
+              <div
+                ref={kanbanScrollRef}
+                className="flex gap-2 sm:gap-3 overflow-x-auto scrollbar-hide pb-4 h-full"
+                onScroll={checkScrollButtons}
+              >
+                {PROCESS_STAGES.map((stage) => (
+                  <ProcessColumn
+                    key={stage.status}
+                    stage={stage}
+                    orders={ordersByStatus[stage.status] || []}
+                    onOrderClick={handleOrderClick}
+                    onOrderDrop={handleOrderDrop}
+                    onOrderTransition={handleOrderTransition}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </div>
 

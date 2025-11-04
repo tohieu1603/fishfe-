@@ -22,7 +22,7 @@ export function Timer({ deadline, warningThreshold }: TimerProps) {
 
       if (diff <= 0) {
         setIsOverdue(true);
-        setTimeLeft(0);
+        setTimeLeft(diff); // Keep negative value
       } else {
         setIsOverdue(false);
         setTimeLeft(diff);
@@ -35,8 +35,12 @@ export function Timer({ deadline, warningThreshold }: TimerProps) {
     return () => clearInterval(interval);
   }, [deadline]);
 
-  const minutes = Math.floor(timeLeft / 60);
+  const minutes = Math.floor(Math.abs(timeLeft) / 60);
   const isWarning = minutes <= warningThreshold && !isOverdue;
+
+  const displayTime = isOverdue
+    ? `-${Math.floor(Math.abs(timeLeft) / 60)} phút`
+    : formatTime(timeLeft);
 
   return (
     <div
@@ -46,7 +50,7 @@ export function Timer({ deadline, warningThreshold }: TimerProps) {
       )}
     >
       <Clock className="h-3.5 w-3.5" />
-      <span>{isOverdue ? "Quá hạn" : formatTime(timeLeft)}</span>
+      <span>{displayTime}</span>
     </div>
   );
 }
