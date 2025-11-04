@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 
 interface OrderProgressTimelineProps {
   order: Order;
-  onTransition?: (newStatus: OrderStatus) => void;
+  onTransition?: (newStatus?: OrderStatus) => void;
 }
 
 export function OrderProgressTimeline({ order, onTransition }: OrderProgressTimelineProps) {
@@ -200,7 +200,7 @@ export function OrderProgressTimeline({ order, onTransition }: OrderProgressTime
                 {isCurrent && nextStatus && onTransition && (
                   <div className="mt-3">
                     <Button
-                      onClick={() => onTransition(nextStatus.status)}
+                      onClick={() => onTransition()}
                       className="w-full h-10 bg-black hover:bg-gray-800 text-white font-medium text-sm rounded-lg flex items-center justify-center gap-2"
                     >
                       <span>Chuyển sang: {nextStatus.label}</span>

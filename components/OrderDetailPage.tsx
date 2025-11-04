@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Printer, Clock, ChevronRight, Upload, Trash2 } from "lucide-react";
+import { ArrowLeft, Printer, Clock, ChevronRight, Upload, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Order, OrderStatus, OrderActivity } from "@/types";
@@ -12,6 +12,7 @@ import { ActivityTimeline } from "@/components/ActivityTimeline";
 import { OrderProgressTimeline } from "@/components/OrderProgressTimeline";
 import { SwipeButton } from "@/components/SwipeButton";
 import { PrintDialog } from "@/components/PrintDialog";
+import { AssignUsersDialog } from "@/components/AssignUsersDialog";
 import { getNextStatus } from "@/lib/constants";
 import { toast } from "sonner";
 
@@ -45,6 +46,7 @@ export function OrderDetailPage({ orderId, onClose }: OrderDetailPageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [showTransitionDialog, setShowTransitionDialog] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [activities, setActivities] = useState<any[]>([]);
 
@@ -87,17 +89,17 @@ export function OrderDetailPage({ orderId, onClose }: OrderDetailPageProps) {
         }
       }
 
-      // OrderStatus enum values are already strings, just use them directly
+      // Ensure new_status is sent as string value
       const payload: any = {
-        new_status: newStatus,
+        new_status: String(newStatus),
       };
 
       // Only add failure_reason if provided
       if (data?.failure_reason) {
-        payload.failure_reason = data.failure_reason;
+        payload.failure_reason = String(data.failure_reason);
       }
 
-      console.log("Transition payload:", payload, "Original:", newStatus);
+      console.log("Transition payload:", payload, "Original:", newStatus, "Type:", typeof newStatus);
 
       await orderApi.updateOrderStatus(order.id, payload);
       await fetchOrderDetail();
@@ -106,6 +108,20 @@ export function OrderDetailPage({ orderId, onClose }: OrderDetailPageProps) {
     } catch (error: any) {
       console.error("Failed to transition order:", error);
       toast.error(`Không thể chuyển trạng thái. ${error?.response?.data?.detail || "Vui lòng thử lại!"}`);
+    }
+  };
+
+  const handleAssignUsers = async (userIds: number[]) => {
+    if (!order) return;
+
+    try {
+      await orderApi.updateAssignedUsers(order.id, userIds);
+      await fetchOrderDetail();
+      toast.success("Phân công nhân viên thành công!");
+    } catch (error: any) {
+      console.error("Failed to update assigned users:", error);
+      toast.error(`Không thể phân công nhân viên. ${error?.response?.data?.detail || "Vui lòng thử lại!"}`);
+      throw error;
     }
   };
 
@@ -587,14 +603,25 @@ export function OrderDetailPage({ orderId, onClose }: OrderDetailPageProps) {
             <div className="mb-4">
               <OrderProgressTimeline
                 order={order}
-                onTransition={handleOrderTransition}
+                onTransition={() => setShowTransitionDialog(true)}
               />
             </div>
 
             {/* Assigned Users */}
-            {order.assigned_to && order.assigned_to.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <h4 className="text-sm font-semibold text-gray-900 mb-2">Nhân viên CSKH</h4>
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-semibold text-gray-900">Nhân viên CSKH</h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAssignDialog(true)}
+                  className="h-7 text-xs"
+                >
+                  <Users className="h-3 w-3 mr-1" />
+                  Phân công lại
+                </Button>
+              </div>
+              {order.assigned_to && order.assigned_to.length > 0 ? (
                 <div className="space-y-2">
                   {order.assigned_to.map((user) => (
                     <div key={user.id} className="flex items-center gap-2">
@@ -603,12 +630,14 @@ export function OrderDetailPage({ orderId, onClose }: OrderDetailPageProps) {
                           {user.username.charAt(0).toUpperCase()}
                         </span>
                       </div>
-                      <span className="text-sm text-gray-700">@{user.username}</span>
+                      <span className="text-sm text-gray-700">{user.full_name}</span>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-gray-500">Chưa phân công</p>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -630,6 +659,14 @@ export function OrderDetailPage({ orderId, onClose }: OrderDetailPageProps) {
         open={showPrintDialog}
         onOpenChange={setShowPrintDialog}
         order={order}
+      />
+
+      {/* Assign Users Dialog */}
+      <AssignUsersDialog
+        open={showAssignDialog}
+        onOpenChange={setShowAssignDialog}
+        currentAssignedUsers={order.assigned_to || []}
+        onConfirm={handleAssignUsers}
       />
 
       {/* Bottom Swipe Action Bar - Mobile Friendly */}

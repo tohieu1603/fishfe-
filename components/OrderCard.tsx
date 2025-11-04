@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Timer } from "./Timer";
 import { ConfirmTransitionDialog } from "./ConfirmTransitionDialog";
+import { CancelOrderDialog } from "./CancelOrderDialog";
 import { formatCurrency } from "@/lib/utils";
 import { Order, OrderStatus } from "@/types";
-import { Package, DollarSign, Clock, ArrowRight, ChevronRight, Image, AlertTriangle, Phone } from "lucide-react";
+import { Package, DollarSign, Clock, Eye, ChevronRight, Image, AlertTriangle, Phone, X } from "lucide-react";
 import { PROCESS_STAGES } from "@/lib/constants";
 
 interface OrderCardProps {
@@ -20,6 +21,7 @@ interface OrderCardProps {
 
 export function OrderCard({ order, onClick, onTransition }: OrderCardProps) {
   const [showTransitionDialog, setShowTransitionDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [{ isDragging }, drag] = useDrag(() => ({
     type: "ORDER",
     item: { order },
@@ -34,8 +36,12 @@ export function OrderCard({ order, onClick, onTransition }: OrderCardProps) {
     ? PROCESS_STAGES[currentIndex + 1].status
     : null;
 
-  // Check if order is overdue
-  const isOverdue = order.deadline ? new Date(order.deadline) < new Date() : false;
+  // Check if order is overdue (but not if completed or failed)
+  const isOverdue =
+    order.deadline &&
+    new Date(order.deadline) < new Date() &&
+    order.status !== OrderStatus.COMPLETED &&
+    order.status !== OrderStatus.FAILED;
 
   // Get warning threshold for current stage
   const warningThreshold =
@@ -59,6 +65,24 @@ export function OrderCard({ order, onClick, onTransition }: OrderCardProps) {
     }
   };
 
+  const handleCancelOrder = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowCancelDialog(true);
+  };
+
+  const handleConfirmCancel = async (reason: string) => {
+    if (onTransition) {
+      await onTransition(order, OrderStatus.FAILED, { failure_reason: reason });
+    }
+  };
+
+  // Can only cancel orders before PROCESSING stage
+  const canCancel =
+    order.status !== OrderStatus.FAILED &&
+    order.status !== OrderStatus.COMPLETED &&
+    order.status !== OrderStatus.PROCESSING &&
+    order.status !== OrderStatus.DELIVERY;
+
   return (
     <Card
       ref={drag}
@@ -67,7 +91,9 @@ export function OrderCard({ order, onClick, onTransition }: OrderCardProps) {
       } ${
         isOverdue
           ? "border-2 border-red-500 bg-red-50/50"
-          : "border border-gray-200"
+          : order.status === OrderStatus.COMPLETED
+            ? "border-2 border-green-500 bg-green-50/50"
+            : "border border-gray-200"
       }`}
     >
       <div className="p-3">
@@ -85,7 +111,7 @@ export function OrderCard({ order, onClick, onTransition }: OrderCardProps) {
             <h3 className="text-sm font-bold text-gray-900">#{order.order_number}</h3>
             <p className="text-xs text-gray-600 mt-0.5">{order.customer_name}</p>
           </div>
-          {order.deadline && (
+          {order.deadline && order.status !== OrderStatus.COMPLETED && order.status !== OrderStatus.FAILED && (
             <div className="bg-gray-100 rounded-md px-1.5 py-0.5">
               <Timer
                 deadline={order.deadline}
@@ -161,8 +187,21 @@ export function OrderCard({ order, onClick, onTransition }: OrderCardProps) {
             onClick={onClick}
           >
             <span className="font-medium">Xem chi tiết</span>
-            <ArrowRight className="h-3.5 w-3.5" />
+            <Eye className="h-3.5 w-3.5" />
           </Button>
+
+          {/* Cancel Button */}
+          {canCancel && (
+            <Button
+              size="icon"
+              variant="destructive"
+              className="h-7 w-7 bg-red-500 hover:bg-red-600 text-white rounded-lg"
+              onClick={handleCancelOrder}
+              title="Hủy đơn hàng"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
 
           {/* Quick Transition Button */}
           {nextStatus && order.status !== OrderStatus.COMPLETED && order.status !== OrderStatus.FAILED && (
@@ -189,6 +228,14 @@ export function OrderCard({ order, onClick, onTransition }: OrderCardProps) {
           onConfirm={handleConfirmTransition}
         />
       )}
+
+      {/* Cancel Order Dialog */}
+      <CancelOrderDialog
+        open={showCancelDialog}
+        onOpenChange={setShowCancelDialog}
+        order={order}
+        onConfirm={handleConfirmCancel}
+      />
     </Card>
   );
 }

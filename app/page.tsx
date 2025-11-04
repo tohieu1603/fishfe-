@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ProcessColumn } from "@/components/ProcessColumn";
 import { CreateOrderDialog } from "@/components/CreateOrderDialog";
 import { OrderDetailPage } from "@/components/OrderDetailPage";
+import { ConfirmTransitionDialog } from "@/components/ConfirmTransitionDialog";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { OverdueOrdersAlert } from "@/components/OverdueOrdersAlert";
@@ -34,6 +35,11 @@ function HomePage() {
   } = useStore();
 
   const [localSearch, setLocalSearch] = useState("");
+  const [showTransitionDialog, setShowTransitionDialog] = useState(false);
+  const [pendingTransition, setPendingTransition] = useState<{
+    order: Order;
+    newStatus: OrderStatus;
+  } | null>(null);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -56,15 +62,43 @@ function HomePage() {
   }, [fetchOrders]);
 
   const handleOrderDrop = async (order: Order, newStatus: OrderStatus) => {
+    // Open confirmation dialog instead of directly updating
+    setPendingTransition({ order, newStatus });
+    setShowTransitionDialog(true);
+  };
+
+  const handleConfirmTransition = async (data?: any) => {
+    if (!pendingTransition) return;
+
+    const { order, newStatus } = pendingTransition;
+
     try {
-      updateOrder(order.id, { status: newStatus });
-      await orderApi.updateOrderStatus(order.id, { new_status: newStatus });
+      // Upload images if provided
+      if (data?.images && data.images.length > 0) {
+        for (const image of data.images) {
+          await orderApi.uploadOrderImage(order.id, image, data.imageType || "other");
+        }
+      }
+
+      // Prepare payload
+      const payload: any = {
+        new_status: String(newStatus),
+      };
+
+      // Add optional fields if provided
+      if (data?.failure_reason) {
+        payload.failure_reason = data.failure_reason;
+      }
+
+      // Update order status
+      await orderApi.updateOrderStatus(order.id, payload);
+
+      // Refresh orders
       fetchOrders();
       toast.success("Chuyển trạng thái thành công!");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to update order status:", error);
-      updateOrder(order.id, { status: order.status });
-      toast.error("Không thể cập nhật trạng thái đơn hàng. Vui lòng thử lại!");
+      toast.error(`Không thể cập nhật trạng thái. ${error?.response?.data?.detail || "Vui lòng thử lại!"}`);
     }
   };
 
@@ -329,6 +363,18 @@ function HomePage() {
           onOpenChange={setCreateDialogOpen}
           onSuccess={fetchOrders}
         />
+
+        {/* Transition Confirmation Dialog */}
+        {pendingTransition && (
+          <ConfirmTransitionDialog
+            open={showTransitionDialog}
+            onOpenChange={setShowTransitionDialog}
+            order={pendingTransition.order}
+            fromStatus={pendingTransition.order.status as OrderStatus}
+            toStatus={pendingTransition.newStatus}
+            onConfirm={handleConfirmTransition}
+          />
+        )}
       </div>
     </DndProvider>
   );

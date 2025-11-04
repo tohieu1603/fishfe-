@@ -40,6 +40,9 @@ export function ConfirmTransitionDialog({
   const [deliveryTime, setDeliveryTime] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  // Payment method
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "transfer" | "cod">("transfer");
+
   // Delivery options
   const [shippingType, setShippingType] = useState<"external" | "company">("external");
   const [shipperName, setShipperName] = useState("");
@@ -132,13 +135,16 @@ export function ConfirmTransitionDialog({
     if (fromStatus === OrderStatus.PAYMENT && toStatus === OrderStatus.IN_KITCHEN) {
       return {
         title: "Xác nhận chuyển sang Vào bếp",
-        description: "Chỉnh thời gian nhận hàng nếu cần.",
-        requireConfirm: false,
-        requireImages: false,
+        description: "Upload ảnh bill và chọn phương thức thanh toán.",
+        requireConfirm: true,
+        confirmText: "Tôi xác nhận đã nhận được thanh toán và gửi bill cho khách",
+        requireImages: true,
         mustHaveImages: false,
+        imageType: "invoice",
+        imageLabel: "Ảnh bill thanh toán (tùy chọn)",
         requirePhone: false,
-        requireTime: true,
-        timeLabel: "Thời gian nhận hàng",
+        requireTime: false,
+        requirePaymentMethod: true,
         requireAssignment: true,
       };
     }
@@ -147,13 +153,13 @@ export function ConfirmTransitionDialog({
     if (fromStatus === OrderStatus.IN_KITCHEN && toStatus === OrderStatus.PROCESSING) {
       return {
         title: "Xác nhận chuyển sang Chế biến",
-        description: "Xác nhận đã nhận hàng và bắt đầu chế biến.",
-        requireConfirm: true,
-        confirmText: "Tôi xác nhận đã nhận hàng và bắt đầu chế biến",
+        description: "Chỉnh thời hạn hoàn thành nếu cần.",
+        requireConfirm: false,
         requireImages: false,
         mustHaveImages: false,
         requirePhone: false,
-        requireTime: false,
+        requireTime: true,
+        timeLabel: "Thời hạn hoàn thành",
         requireAssignment: true,
       };
     }
@@ -244,6 +250,11 @@ export function ConfirmTransitionDialog({
         }
       }
 
+      // Handle payment method
+      if (config.requirePaymentMethod) {
+        data.paymentMethod = paymentMethod;
+      }
+
       // Handle user assignment
       if (config.requireAssignment && selectedUserId) {
         data.responsibleUserId = selectedUserId;
@@ -263,6 +274,7 @@ export function ConfirmTransitionDialog({
     setImages([]);
     setShopPhone("");
     setDeliveryTime("");
+    setPaymentMethod("transfer");
     setShippingType("external");
     setShipperName("");
     setSelectedCompanyShipper("");
@@ -421,6 +433,48 @@ export function ConfirmTransitionDialog({
               </div>
             );
           })()}
+
+          {/* Payment Method */}
+          {config.requirePaymentMethod && (
+            <div className="space-y-2">
+              <Label className="text-xs sm:text-sm font-medium">Phương thức thanh toán *</Label>
+              <div className="flex flex-col gap-2.5 sm:gap-2">
+                <label className="flex items-center space-x-2 cursor-pointer p-2.5 sm:p-2 border rounded-lg hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="transfer"
+                    checked={paymentMethod === "transfer"}
+                    onChange={(e) => setPaymentMethod(e.target.value as "cash" | "transfer" | "cod")}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-xs sm:text-sm flex-1">Chuyển khoản</span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer p-2.5 sm:p-2 border rounded-lg hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="cash"
+                    checked={paymentMethod === "cash"}
+                    onChange={(e) => setPaymentMethod(e.target.value as "cash" | "transfer" | "cod")}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-xs sm:text-sm flex-1">Tiền mặt</span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer p-2.5 sm:p-2 border rounded-lg hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="cod"
+                    checked={paymentMethod === "cod"}
+                    onChange={(e) => setPaymentMethod(e.target.value as "cash" | "transfer" | "cod")}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-xs sm:text-sm flex-1">COD (Thu hộ)</span>
+                </label>
+              </div>
+            </div>
+          )}
 
           {/* Shipping Options */}
           {config.requireShipping && (

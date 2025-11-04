@@ -94,6 +94,14 @@ export const orderApi = {
     return response.data;
   },
 
+  // Update assigned users
+  updateAssignedUsers: async (id: number, userIds: number[]) => {
+    const response = await apiClient.patch<Order>(`/orders/${id}/assigned-users`, {
+      assigned_to_ids: userIds,
+    });
+    return response.data;
+  },
+
   // Upload order images
   uploadOrderImage: async (id: number, file: File, imageType: string, description?: string) => {
     const formData = new FormData();
