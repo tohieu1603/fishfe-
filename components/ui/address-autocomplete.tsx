@@ -11,18 +11,23 @@ interface AddressAutocompleteProps {
 }
 
 interface Province {
-  name: string;
-  code: number;
+  province_id: string;
+  province_name: string;
+  province_type: string;
 }
 
 interface District {
-  name: string;
-  code: number;
+  district_id: string;
+  district_name: string;
+  district_type: string;
+  province_id: string;
 }
 
 interface Ward {
-  name: string;
-  code: number;
+  ward_id: string;
+  ward_name: string;
+  ward_type: string;
+  district_id: string;
 }
 
 export function AddressAutocomplete({ onChange, required = false }: AddressAutocompleteProps) {
@@ -38,19 +43,19 @@ export function AddressAutocomplete({ onChange, required = false }: AddressAutoc
 
   // Fetch provinces on mount
   useEffect(() => {
-    fetch("https://provinces.open-api.vn/api/p/")
+    fetch("https://vapi.vnappmob.com/api/province/")
       .then((res) => res.json())
-      .then((data) => setProvinces(data))
+      .then((data) => setProvinces(data.results || []))
       .catch((err) => console.error("Failed to fetch provinces:", err));
   }, []);
 
   // Fetch districts when province changes
   useEffect(() => {
     if (selectedProvince) {
-      fetch(`https://provinces.open-api.vn/api/p/${selectedProvince.code}?depth=2`)
+      fetch(`https://vapi.vnappmob.com/api/province/district/${selectedProvince.province_id}`)
         .then((res) => res.json())
         .then((data) => {
-          setDistricts(data.districts || []);
+          setDistricts(data.results || []);
           setSelectedDistrict(null);
           setWards([]);
           setSelectedWard(null);
@@ -67,10 +72,10 @@ export function AddressAutocomplete({ onChange, required = false }: AddressAutoc
   // Fetch wards when district changes
   useEffect(() => {
     if (selectedDistrict) {
-      fetch(`https://provinces.open-api.vn/api/d/${selectedDistrict.code}?depth=2`)
+      fetch(`https://vapi.vnappmob.com/api/province/ward/${selectedDistrict.district_id}`)
         .then((res) => res.json())
         .then((data) => {
-          setWards(data.wards || []);
+          setWards(data.results || []);
           setSelectedWard(null);
         })
         .catch((err) => console.error("Failed to fetch wards:", err));
@@ -84,9 +89,9 @@ export function AddressAutocomplete({ onChange, required = false }: AddressAutoc
   useEffect(() => {
     const parts = [
       streetAddress,
-      selectedWard?.name,
-      selectedDistrict?.name,
-      selectedProvince?.name,
+      selectedWard?.ward_name,
+      selectedDistrict?.district_name,
+      selectedProvince?.province_name,
     ].filter(Boolean);
 
     onChange(parts.join(", "));
@@ -111,9 +116,9 @@ export function AddressAutocomplete({ onChange, required = false }: AddressAutoc
           <Label htmlFor="province" className="text-sm">Tỉnh/Thành phố *</Label>
           <select
             id="province"
-            value={selectedProvince?.code || ""}
+            value={selectedProvince?.province_id || ""}
             onChange={(e) => {
-              const province = provinces.find((p) => p.code === Number(e.target.value));
+              const province = provinces.find((p) => p.province_id === e.target.value);
               setSelectedProvince(province || null);
             }}
             required={required}
@@ -121,8 +126,8 @@ export function AddressAutocomplete({ onChange, required = false }: AddressAutoc
           >
             <option value="">Chọn tỉnh/thành</option>
             {provinces.map((province) => (
-              <option key={province.code} value={province.code}>
-                {province.name}
+              <option key={province.province_id} value={province.province_id}>
+                {province.province_name}
               </option>
             ))}
           </select>
@@ -132,9 +137,9 @@ export function AddressAutocomplete({ onChange, required = false }: AddressAutoc
           <Label htmlFor="district" className="text-sm">Quận/Huyện *</Label>
           <select
             id="district"
-            value={selectedDistrict?.code || ""}
+            value={selectedDistrict?.district_id || ""}
             onChange={(e) => {
-              const district = districts.find((d) => d.code === Number(e.target.value));
+              const district = districts.find((d) => d.district_id === e.target.value);
               setSelectedDistrict(district || null);
             }}
             required={required}
@@ -143,8 +148,8 @@ export function AddressAutocomplete({ onChange, required = false }: AddressAutoc
           >
             <option value="">Chọn quận/huyện</option>
             {districts.map((district) => (
-              <option key={district.code} value={district.code}>
-                {district.name}
+              <option key={district.district_id} value={district.district_id}>
+                {district.district_name}
               </option>
             ))}
           </select>
@@ -154,9 +159,9 @@ export function AddressAutocomplete({ onChange, required = false }: AddressAutoc
           <Label htmlFor="ward" className="text-sm">Phường/Xã *</Label>
           <select
             id="ward"
-            value={selectedWard?.code || ""}
+            value={selectedWard?.ward_id || ""}
             onChange={(e) => {
-              const ward = wards.find((w) => w.code === Number(e.target.value));
+              const ward = wards.find((w) => w.ward_id === e.target.value);
               setSelectedWard(ward || null);
             }}
             required={required}
@@ -165,8 +170,8 @@ export function AddressAutocomplete({ onChange, required = false }: AddressAutoc
           >
             <option value="">Chọn phường/xã</option>
             {wards.map((ward) => (
-              <option key={ward.code} value={ward.code}>
-                {ward.name}
+              <option key={ward.ward_id} value={ward.ward_id}>
+                {ward.ward_name}
               </option>
             ))}
           </select>
