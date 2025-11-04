@@ -43,7 +43,7 @@ export function AddressAutocomplete({ onChange, required = false }: AddressAutoc
   useEffect(() => {
     fetch("https://vnprovinces.pythonanywhere.com/api/provinces/?page_size=100")
       .then((res) => res.json())
-      .then((data) => setProvinces(data.results || []))
+      .then((data) => {console.log(data)})
       .catch((err) => console.error("Failed to fetch provinces:", err));
   }, []);
 

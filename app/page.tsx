@@ -3,9 +3,15 @@
 import { useEffect, useState, useCallback } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { Plus, Search, ChevronDown, User, Filter, ChevronRight } from "lucide-react";
+import { Plus, Search, ChevronDown, User, Filter, ChevronRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ProcessColumn } from "@/components/ProcessColumn";
 import { CreateOrderDialog } from "@/components/CreateOrderDialog";
 import { OrderDetailPage } from "@/components/OrderDetailPage";
@@ -140,7 +146,7 @@ function HomePage() {
   const handleSearchChange = (value: string) => {
     setLocalSearch(value);
     const timer = setTimeout(() => {
-      setFilters({ search: value });
+      setFilters({ ...filters, search: value });
     }, 500);
     return () => clearTimeout(timer);
   };
@@ -205,15 +211,46 @@ function HomePage() {
               />
             </div>
 
-            {/* Hide extra filters on mobile */}
-            <Button variant="outline" className="min-w-[140px] justify-between hidden md:flex">
-              Tất cả trạng thái
-              <ChevronDown className="h-4 w-4 ml-2" />
-            </Button>
+            {/* Status Filter Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="min-w-[140px] justify-between hidden md:flex">
+                  {filters.status
+                    ? PROCESS_STAGES.find((s) => s.status === filters.status)?.label
+                    : "Tất cả trạng thái"}
+                  <ChevronDown className="h-4 w-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem
+                  onClick={() => setFilters({ ...filters, status: undefined })}
+                  className="cursor-pointer"
+                >
+                  <Check
+                    className={`mr-2 h-4 w-4 ${!filters.status ? "opacity-100" : "opacity-0"}`}
+                  />
+                  Tất cả trạng thái
+                </DropdownMenuItem>
+                {PROCESS_STAGES.map((stage) => (
+                  <DropdownMenuItem
+                    key={stage.status}
+                    onClick={() => setFilters({ ...filters, status: stage.status })}
+                    className="cursor-pointer"
+                  >
+                    <Check
+                      className={`mr-2 h-4 w-4 ${
+                        filters.status === stage.status ? "opacity-100" : "opacity-0"
+                      }`}
+                    />
+                    {stage.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <Button
               variant={filters.myOrders ? "default" : "outline"}
-              onClick={() => setFilters({ myOrders: !filters.myOrders })}
+              onClick={() => setFilters({ ...filters, myOrders: !filters.myOrders })}
               size="sm"
               className="hidden sm:flex"
             >
@@ -272,7 +309,7 @@ function HomePage() {
                   return (
                     <button
                       key={stage.status}
-                      onClick={() => setFilters({ status: isActive ? undefined : stage.status })}
+                      onClick={() => setFilters({ ...filters, status: isActive ? undefined : stage.status })}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full whitespace-nowrap text-xs font-medium transition-colors ${
                         isActive
                           ? 'bg-black text-white'

@@ -33,19 +33,30 @@ interface OrderItemInput {
 }
 
 export function CreateOrderDialog({ open, onOpenChange, onSuccess }: CreateOrderDialogProps) {
+  // Helper function to get current datetime in local format for input
+  const getCurrentDateTime = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const [isLoading, setIsLoading] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [loyaltyPhone, setLoyaltyPhone] = useState("");
-  const [customerAddress, setCustomerAddress] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("Hà Nội, ");
   const [items, setItems] = useState<OrderItemInput[]>([
     { product_name: "", quantity: 1, unit: "kg", price: 0 },
   ]);
   const [shippingFee, setShippingFee] = useState(0);
   const [notes, setNotes] = useState("");
-  const [deliveryTime, setDeliveryTime] = useState("");
-  const [kitchenTime, setKitchenTime] = useState("");
-  const [deadline, setDeadline] = useState("");
+  const [deliveryTime, setDeliveryTime] = useState(getCurrentDateTime());
+  const [kitchenTime, setKitchenTime] = useState(getCurrentDateTime());
+  const [deadline, setDeadline] = useState(getCurrentDateTime());
   const [warningMinutes, setWarningMinutes] = useState(5);
   const [taskDescription, setTaskDescription] = useState("");
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -131,13 +142,13 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess }: CreateOrder
     setCustomerName("");
     setCustomerPhone("");
     setLoyaltyPhone("");
-    setCustomerAddress("");
+    setCustomerAddress("Hà Nội, ");
     setItems([{ product_name: "", quantity: 1, unit: "kg", price: 0 }]);
     setShippingFee(0);
     setNotes("");
-    setDeliveryTime("");
-    setKitchenTime("");
-    setDeadline("");
+    setDeliveryTime(getCurrentDateTime());
+    setKitchenTime(getCurrentDateTime());
+    setDeadline(getCurrentDateTime());
     setWarningMinutes(5);
     setTaskDescription("");
     setAttachments([]);

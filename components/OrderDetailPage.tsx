@@ -650,7 +650,10 @@ export function OrderDetailPage({ orderId, onClose }: OrderDetailPageProps) {
           order={order}
           fromStatus={order.status as OrderStatus}
           toStatus={getNextStatus(order.status as OrderStatus) || OrderStatus.COMPLETED}
-          onConfirm={handleOrderTransition}
+          onConfirm={(data) => {
+            const nextStatus = getNextStatus(order.status as OrderStatus) || OrderStatus.COMPLETED;
+            return handleOrderTransition(nextStatus, data);
+          }}
         />
       )}
 
