@@ -38,7 +38,7 @@ export function AddressAutocomplete({ onChange, required = false }: AddressAutoc
 
   // Fetch provinces on mount
   useEffect(() => {
-    fetch("http://provinces.open-api.vn/api/p/")
+    fetch("https://provinces.open-api.vn/api/p/")
       .then((res) => res.json())
       .then((data) => setProvinces(data))
       .catch((err) => console.error("Failed to fetch provinces:", err));
@@ -47,7 +47,7 @@ export function AddressAutocomplete({ onChange, required = false }: AddressAutoc
   // Fetch districts when province changes
   useEffect(() => {
     if (selectedProvince) {
-      fetch(`http://provinces.open-api.vn/api/p/${selectedProvince.code}?depth=2`)
+      fetch(`https://provinces.open-api.vn/api/p/${selectedProvince.code}?depth=2`)
         .then((res) => res.json())
         .then((data) => {
           setDistricts(data.districts || []);
@@ -67,7 +67,7 @@ export function AddressAutocomplete({ onChange, required = false }: AddressAutoc
   // Fetch wards when district changes
   useEffect(() => {
     if (selectedDistrict) {
-      fetch(`http://provinces.open-api.vn/api/d/${selectedDistrict.code}?depth=2`)
+      fetch(`https://provinces.open-api.vn/api/d/${selectedDistrict.code}?depth=2`)
         .then((res) => res.json())
         .then((data) => {
           setWards(data.wards || []);
