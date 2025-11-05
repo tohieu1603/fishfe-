@@ -72,11 +72,19 @@ const ordersSlice = createSlice({
     },
     // WebSocket event handlers
     orderCreatedWS: (state, action: PayloadAction<Order>) => {
+      console.log('🔄 orderCreatedWS reducer called with:', action.payload);
+      console.log('📊 Current items count:', state.items.length);
+
       // Check if order already exists (prevent duplicates)
       const exists = state.items.some(order => order.id === action.payload.id);
+      console.log('❓ Order exists?', exists);
+
       if (!exists) {
         state.items.unshift(action.payload);
         state.total += 1;
+        console.log('✅ Added order to state. New count:', state.items.length);
+      } else {
+        console.log('⚠️ Order already exists, skipping');
       }
     },
     orderUpdatedWS: (state, action: PayloadAction<Order>) => {
@@ -119,30 +127,23 @@ const ordersSlice = createSlice({
       })
       .addCase(createOrder.fulfilled, (state, action) => {
         state.loading = false;
-        // Order will be added via WebSocket, but add here as fallback
-        const exists = state.items.some(order => order.id === action.payload.id);
-        if (!exists) {
-          state.items.unshift(action.payload);
-          state.total += 1;
-        }
+        // DO NOT add order here - WebSocket will handle it
+        // This prevents race condition where order gets added twice
+        console.log('✅ Order created via API, waiting for WebSocket update...');
       })
       .addCase(createOrder.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Failed to create order';
       })
       // Update order status
-      .addCase(updateOrderStatus.fulfilled, (state, action) => {
-        // Order will be updated via WebSocket, but update here as fallback
-        const index = state.items.findIndex(order => order.id === action.payload.id);
-        if (index !== -1) {
-          state.items[index] = action.payload;
-        }
+      .addCase(updateOrderStatus.fulfilled, (state) => {
+        // DO NOT update order here - WebSocket will handle it
+        console.log('✅ Order status updated via API, waiting for WebSocket update...');
       })
       // Delete order
-      .addCase(deleteOrder.fulfilled, (state, action) => {
-        // Order will be removed via WebSocket, but remove here as fallback
-        state.items = state.items.filter(order => order.id !== action.payload);
-        state.total -= 1;
+      .addCase(deleteOrder.fulfilled, (state) => {
+        // DO NOT delete order here - WebSocket will handle it
+        console.log('✅ Order deleted via API, waiting for WebSocket update...');
       });
   },
 });

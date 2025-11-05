@@ -88,6 +88,12 @@ export const orderApi = {
     return response.data;
   },
 
+  // Update order (full update - items, customer info, fees, etc.)
+  updateOrder: async (id: number, input: Partial<CreateOrderInput>) => {
+    const response = await apiClient.patch<Order>(`/orders/${id}`, input);
+    return response.data;
+  },
+
   // Update order status
   updateOrderStatus: async (id: number, input: UpdateOrderStatusInput) => {
     const response = await apiClient.patch<Order>(`/orders/${id}/status`, input);

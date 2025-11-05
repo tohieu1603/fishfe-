@@ -81,8 +81,7 @@ function HomePage() {
       // Update order status
       await orderApi.updateOrderStatus(order.id, payload);
 
-      // Refresh orders
-      fetchOrders();
+      // No need to refresh - WebSocket will handle realtime updates
       toast.success("Chuyển trạng thái thành công!");
     } catch (error: any) {
       console.error("Failed to update order status:", error);
@@ -112,8 +111,7 @@ function HomePage() {
       // Update order status
       await orderApi.updateOrderStatus(order.id, payload);
 
-      // Refresh orders
-      fetchOrders();
+      // No need to refresh - WebSocket will handle realtime updates
       toast.success("Chuyển trạng thái thành công!");
     } catch (error: any) {
       console.error("Failed to transition order:", error);
@@ -518,7 +516,10 @@ function HomePage() {
         <CreateOrderDialog
           open={isCreateDialogOpen}
           onOpenChange={setCreateDialogOpen}
-          onSuccess={fetchOrders}
+          onSuccess={() => {
+            // No need to fetch orders - WebSocket will handle realtime updates
+            console.log('✅ Order created - WebSocket will update the list automatically');
+          }}
         />
 
         {/* Transition Confirmation Dialog */}
