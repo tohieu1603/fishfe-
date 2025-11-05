@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Printer, Clock, ChevronRight, Upload, Trash2, Users } from "lucide-react";
+import { ArrowLeft, Printer, Clock, ChevronRight, Upload, Trash2, Users, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Order, OrderStatus, OrderActivity } from "@/types";
@@ -13,6 +13,7 @@ import { OrderProgressTimeline } from "@/components/OrderProgressTimeline";
 import { SwipeButton } from "@/components/SwipeButton";
 import { PrintDialog } from "@/components/PrintDialog";
 import { AssignUsersDialog } from "@/components/AssignUsersDialog";
+import { CreateOrderDialog } from "@/components/CreateOrderDialog";
 import { getNextStatus } from "@/lib/constants";
 import { toast } from "sonner";
 
@@ -47,6 +48,7 @@ export function OrderDetailPage({ orderId, onClose }: OrderDetailPageProps) {
   const [showTransitionDialog, setShowTransitionDialog] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [activities, setActivities] = useState<any[]>([]);
 
@@ -236,6 +238,15 @@ export function OrderDetailPage({ orderId, onClose }: OrderDetailPageProps) {
               <Badge className={`${getStatusColor(order.status)} text-xs whitespace-nowrap`}>{getStatusLabel(order.status)}</Badge>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden sm:flex"
+                onClick={() => setShowEditDialog(true)}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Sửa đơn
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -672,6 +683,18 @@ export function OrderDetailPage({ orderId, onClose }: OrderDetailPageProps) {
         onOpenChange={setShowAssignDialog}
         currentAssignedUsers={order.assigned_to || []}
         onConfirm={handleAssignUsers}
+      />
+
+      {/* Edit Order Dialog */}
+      <CreateOrderDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        editMode={true}
+        orderToEdit={order}
+        onSuccess={() => {
+          setShowEditDialog(false);
+          console.log('✅ Order updated - WebSocket will refresh the order automatically');
+        }}
       />
 
       {/* Bottom Swipe Action Bar - Mobile Friendly */}

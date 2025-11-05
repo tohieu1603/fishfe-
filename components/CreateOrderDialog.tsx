@@ -12,16 +12,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Search, X } from "lucide-react";
-import { orderApi, authApi } from "@/lib/api";
+import { Plus, Trash2 } from "lucide-react";
+import { orderApi } from "@/lib/api";
 import { toast } from "sonner";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
-import { User } from "@/types";
+import { Order } from "@/types";
 
 interface CreateOrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  editMode?: boolean;
+  orderToEdit?: Order | null;
 }
 
 interface OrderItemInput {
@@ -33,7 +35,7 @@ interface OrderItemInput {
   note?: string;
 }
 
-export function CreateOrderDialog({ open, onOpenChange, onSuccess }: CreateOrderDialogProps) {
+export function CreateOrderDialog({ open, onOpenChange, onSuccess, editMode = false, orderToEdit = null }: CreateOrderDialogProps) {
   // Helper function to get current datetime in local format for input
   const getCurrentDateTime = () => {
     const now = new Date();
@@ -56,23 +58,13 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess }: CreateOrder
   const [shippingFee, setShippingFee] = useState(0);
   const [notes, setNotes] = useState("");
   const [deliveryTime, setDeliveryTime] = useState(getCurrentDateTime());
-  const [kitchenTime, setKitchenTime] = useState(getCurrentDateTime());
-  const [deadline, setDeadline] = useState(getCurrentDateTime());
-  const [warningMinutes, setWarningMinutes] = useState(5);
-  const [taskDescription, setTaskDescription] = useState("");
-  const [attachments, setAttachments] = useState<File[]>([]);
 
   // Employee assignment states
-  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
-  const [userSearchQuery, setUserSearchQuery] = useState("");
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
 
-  // Load users when dialog opens
+  // Auto-select current user when dialog opens
   useEffect(() => {
     if (open) {
-      loadUsers();
-      // Auto-select current user
       const currentUser = localStorage.getItem("current_user");
       if (currentUser) {
         const userId = JSON.parse(currentUser).id;
@@ -81,52 +73,66 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess }: CreateOrder
     }
   }, [open]);
 
-  // Close dropdown when clicking outside
+  // Helper function to format datetime for input field
+  const formatDateTimeForInput = (dateString: string) => {
+    if (!dateString) return getCurrentDateTime();
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  // Populate form when in edit mode
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.user-search-container')) {
-        setShowUserDropdown(false);
+    if (editMode && orderToEdit && open) {
+      setCustomerName(orderToEdit.customer_name || "");
+      setCustomerPhone(orderToEdit.customer_phone || "");
+      setCustomerAddress(orderToEdit.customer_address || "Hà Nội, ");
+      setLoyaltyPhone(orderToEdit.loyalty_phone || "");
+
+      // Populate items
+      if (orderToEdit.items && orderToEdit.items.length > 0) {
+        setItems(orderToEdit.items.map(item => ({
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit: item.unit,
+          price: item.price,
+          note: item.note || ""
+        })));
       }
-    };
 
-    if (showUserDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
+      setShippingFee(orderToEdit.shipping_fee || 0);
+      setNotes(orderToEdit.notes || "");
+      setDeliveryTime(formatDateTimeForInput(orderToEdit.delivery_time));
+
+      // Populate assigned users
+      if (orderToEdit.assigned_to && orderToEdit.assigned_to.length > 0) {
+        setSelectedUserIds(orderToEdit.assigned_to.map(u => u.id));
+      }
+    } else if (!editMode && open) {
+      // Reset form when creating new order
+      setCustomerName("");
+      setCustomerPhone("");
+      setCustomerAddress("Hà Nội, ");
+      setLoyaltyPhone("");
+      setItems([{ product_name: "", quantity: 1, unit: "kg", price: 0 }]);
+      setShippingFee(0);
+      setNotes("");
+      setDeliveryTime(getCurrentDateTime());
+
+      // Auto-select current user for new orders
+      const currentUser = localStorage.getItem("current_user");
+      if (currentUser) {
+        const userId = JSON.parse(currentUser).id;
+        setSelectedUserIds([userId]);
+      }
     }
+  }, [editMode, orderToEdit, open]);
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showUserDropdown]);
-
-  const loadUsers = async () => {
-    try {
-      const users = await authApi.getUsers();
-      setAllUsers(users);
-    } catch (error) {
-      console.error("Failed to load users:", error);
-      toast.error("Không thể tải danh sách nhân viên");
-    }
-  };
-
-  const toggleUserSelection = (userId: number) => {
-    setSelectedUserIds((prev) =>
-      prev.includes(userId)
-        ? prev.filter((id) => id !== userId)
-        : [...prev, userId]
-    );
-  };
-
-  const removeSelectedUser = (userId: number) => {
-    setSelectedUserIds((prev) => prev.filter((id) => id !== userId));
-  };
-
-  const filteredUsers = allUsers.filter((user) =>
-    user.full_name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-    user.username.toLowerCase().includes(userSearchQuery.toLowerCase())
-  );
-
-  const selectedUsers = allUsers.filter((user) => selectedUserIds.includes(user.id));
 
   const addItem = () => {
     setItems([...items, { product_name: "", quantity: 1, unit: "kg", price: 0 }]);
@@ -147,17 +153,6 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess }: CreateOrder
     return itemsTotal + shippingFee;
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      const newFiles = Array.from(files);
-      setAttachments([...attachments, ...newFiles]);
-    }
-  };
-
-  const removeAttachment = (index: number) => {
-    setAttachments(attachments.filter((_, i) => i !== index));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,20 +177,29 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess }: CreateOrder
         assigned_to_ids: selectedUserIds,
       };
 
-      console.log("Creating order with input:", input);
-      const result = await orderApi.createOrder(input);
-      console.log("Order created successfully:", result);
+      if (editMode && orderToEdit) {
+        // Update existing order
+        console.log("Updating order with input:", input);
+        const result = await orderApi.updateOrder(orderToEdit.id, input);
+        console.log("Order updated successfully:", result);
+        toast.success("Cập nhật đơn hàng thành công!");
+      } else {
+        // Create new order
+        console.log("Creating order with input:", input);
+        const result = await orderApi.createOrder(input);
+        console.log("Order created successfully:", result);
+        toast.success("Tạo đơn hàng thành công!");
+      }
 
-      toast.success("Tạo đơn hàng thành công!");
       resetForm();
       onOpenChange(false);
 
-      // Call onSuccess after dialog is closed to refresh the order list
-      console.log("Calling onSuccess to refresh orders...");
+      // Call onSuccess after dialog is closed - WebSocket will handle the update
+      console.log("Calling onSuccess - WebSocket will refresh the order...");
       onSuccess();
     } catch (error: any) {
-      console.error("Failed to create order:", error);
-      toast.error(`Không thể tạo đơn hàng. ${error?.response?.data?.detail || "Vui lòng thử lại!"}`);
+      console.error(`Failed to ${editMode ? 'update' : 'create'} order:`, error);
+      toast.error(`Không thể ${editMode ? 'cập nhật' : 'tạo'} đơn hàng. ${error?.response?.data?.detail || "Vui lòng thử lại!"}`);
     } finally {
       setIsLoading(false);
     }
@@ -210,13 +214,6 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess }: CreateOrder
     setShippingFee(0);
     setNotes("");
     setDeliveryTime(getCurrentDateTime());
-    setKitchenTime(getCurrentDateTime());
-    setDeadline(getCurrentDateTime());
-    setWarningMinutes(5);
-    setTaskDescription("");
-    setAttachments([]);
-    setUserSearchQuery("");
-    setShowUserDropdown(false);
     // Reset to current user
     const currentUser = localStorage.getItem("current_user");
     if (currentUser) {
@@ -229,49 +226,41 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess }: CreateOrder
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto bg-white">
+      <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
         <DialogHeader>
-          <DialogTitle className="text-lg text-gray-900">Tạo đơn hàng mới</DialogTitle>
-          <DialogDescription className="text-sm text-gray-600">
-            Điền thông tin đầy đủ để tạo đơn hàng mới trong hệ thống
+          <DialogTitle className="text-base md:text-lg text-gray-900">
+            {editMode ? "Sửa đơn hàng" : "Tạo đơn hàng mới"}
+          </DialogTitle>
+          <DialogDescription className="text-xs md:text-sm text-gray-600">
+            {editMode ? "Cập nhật thông tin đơn hàng" : "Điền thông tin để tạo đơn hàng mới"}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Customer Information */}
           <div className="space-y-3">
-            <h3 className="font-semibold text-base">Thông tin khách hàng</h3>
-            <div className="grid grid-cols-3 gap-3">
+            <h3 className="font-semibold text-sm md:text-base">Thông tin khách hàng</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="customerName" className="text-sm">Tên khách hàng *</Label>
+                <Label htmlFor="customerName" className="text-xs md:text-sm">Tên khách hàng *</Label>
                 <Input
                   id="customerName"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   required
                   placeholder="Nguyễn Văn A"
-                  className="h-9 text-sm"
+                  className="h-9 md:h-10 text-sm"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="customerPhone" className="text-sm">Số điện thoại *</Label>
+                <Label htmlFor="customerPhone" className="text-xs md:text-sm">Số điện thoại *</Label>
                 <Input
                   id="customerPhone"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
                   required
                   placeholder="0901234567"
-                  className="h-9 text-sm"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="loyaltyPhone" className="text-sm">SĐT tích điểm</Label>
-                <Input
-                  id="loyaltyPhone"
-                  value={loyaltyPhone}
-                  onChange={(e) => setLoyaltyPhone(e.target.value)}
-                  placeholder="0901234567"
-                  className="h-9 text-sm"
+                  className="h-9 md:h-10 text-sm"
                 />
               </div>
             </div>
@@ -282,143 +271,43 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess }: CreateOrder
             />
           </div>
 
-          {/* Assign Employees */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-base">Phân công nhân viên</h3>
 
-            {/* Selected users display */}
-            {selectedUsers.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {selectedUsers.map((user) => (
-                  <div
-                    key={user.id}
-                    className="inline-flex items-center gap-1.5 bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full text-sm"
-                  >
-                    <span>{user.full_name}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeSelectedUser(user.id)}
-                      className="hover:bg-blue-200 rounded-full p-0.5 transition-colors"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Search input */}
-            <div className="relative user-search-container">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Tìm kiếm nhân viên theo tên..."
-                  value={userSearchQuery}
-                  onChange={(e) => setUserSearchQuery(e.target.value)}
-                  onFocus={() => setShowUserDropdown(true)}
-                  className="pl-9 h-9 text-sm"
-                />
-              </div>
-
-              {/* Dropdown list */}
-              {showUserDropdown && filteredUsers.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                  {filteredUsers.map((user) => {
-                    const isSelected = selectedUserIds.includes(user.id);
-                    return (
-                      <button
-                        key={user.id}
-                        type="button"
-                        onClick={() => {
-                          toggleUserSelection(user.id);
-                          setUserSearchQuery("");
-                          setShowUserDropdown(false);
-                        }}
-                        className={`w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors flex items-center justify-between ${
-                          isSelected ? "bg-blue-50" : ""
-                        }`}
-                      >
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {user.full_name}
-                          </p>
-                          <p className="text-xs text-gray-500">@{user.username}</p>
-                        </div>
-                        {isSelected && (
-                          <div className="h-5 w-5 rounded-full bg-blue-600 flex items-center justify-center">
-                            <svg
-                              className="h-3 w-3 text-white"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Products */}
+          {/* Products - Simplified */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-base">Sản phẩm</h3>
+              <h3 className="font-semibold text-sm md:text-base">Sản phẩm</h3>
               <Button type="button" size="sm" onClick={addItem} className="h-8 text-xs">
                 <Plus className="h-3.5 w-3.5 mr-1" />
-                Thêm sản phẩm
+                <span className="hidden sm:inline">Thêm món</span>
+                <span className="sm:hidden">Thêm</span>
               </Button>
             </div>
 
             {items.map((item, index) => (
-              <div key={index} className="border border-gray-200 rounded-lg p-3 space-y-2">
+              <div key={index} className="border border-gray-200 rounded-lg p-3 space-y-2 bg-gray-50">
                 <div className="flex gap-2 items-start">
-                  <div className="flex-shrink-0 w-6 h-6 bg-gray-100 rounded flex items-center justify-center text-xs font-semibold text-gray-600">
+                  <div className="flex-shrink-0 w-6 h-6 bg-gray-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
                     {index + 1}
                   </div>
                   <div className="flex-1 space-y-2">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <Label className="text-xs text-gray-600">Tên món *</Label>
-                        <Input
-                          placeholder="VD: Ngôn hoa lửa"
-                          value={item.product_name}
-                          onChange={(e) => updateItem(index, "product_name", e.target.value)}
-                          required
-                          className="h-9 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-gray-600">Cân nặng (kg) *</Label>
-                        <Input
-                          type="number"
-                          placeholder="VD: 2"
-                          value={item.quantity}
-                          onChange={(e) => updateItem(index, "quantity", parseFloat(e.target.value) || 0)}
-                          required
-                          min="0.1"
-                          step="0.1"
-                          className="h-9 text-sm"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-gray-600">Ghi chú món</Label>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs md:text-sm font-medium">Tên món *</Label>
                       <Input
+                        placeholder="Nhập tên món"
+                        value={item.product_name}
+                        onChange={(e) => updateItem(index, "product_name", e.target.value)}
+                        required
+                        className="h-9 md:h-10 text-sm bg-white"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs md:text-sm font-medium">Ghi chú món</Label>
+                      <textarea
                         placeholder="VD: nướng mơi, làm chín vừa..."
                         value={item.note || ""}
                         onChange={(e) => updateItem(index, "note", e.target.value)}
-                        className="h-9 text-sm"
+                        rows={2}
+                        className="flex w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                       />
                     </div>
                   </div>
@@ -428,7 +317,7 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess }: CreateOrder
                       variant="ghost"
                       size="icon"
                       onClick={() => removeItem(index)}
-                      className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-100 shrink-0"
                       title="Xóa món"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -439,139 +328,28 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess }: CreateOrder
             ))}
           </div>
 
-          {/* Fees */}
+          {/* Notes & Delivery Time */}
           <div className="space-y-3">
-            <h3 className="font-semibold text-base">Chi phí</h3>
             <div className="space-y-1.5">
-              <Label htmlFor="shippingFee" className="text-sm">Phí ship</Label>
-              <Input
-                id="shippingFee"
-                type="number"
-                value={shippingFee === 0 ? "" : shippingFee}
-                onChange={(e) => setShippingFee(e.target.value === "" ? 0 : parseFloat(e.target.value))}
-                placeholder="0"
-                min="0"
-                step="1000"
-                className="h-9 text-sm"
-              />
-            </div>
-          </div>
-
-          {/* Additional Info */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-base">Thông tin bổ sung</h3>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="deliveryTime" className="text-sm">Thời gian nhận hàng</Label>
-                <Input
-                  id="deliveryTime"
-                  type="datetime-local"
-                  value={deliveryTime}
-                  onChange={(e) => setDeliveryTime(e.target.value)}
-                  className="h-9 text-sm"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="kitchenTime" className="text-sm">Giờ bếp ra đồ</Label>
-                <Input
-                  id="kitchenTime"
-                  type="datetime-local"
-                  value={kitchenTime}
-                  onChange={(e) => setKitchenTime(e.target.value)}
-                  className="h-9 text-sm"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="deadline" className="text-sm">Giờ ra đơn</Label>
-                <Input
-                  id="deadline"
-                  type="datetime-local"
-                  value={deadline}
-                  onChange={(e) => setDeadline(e.target.value)}
-                  className="h-9 text-sm"
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="warningMinutes" className="text-sm">Thời gian cảnh báo (phút)</Label>
-              <Input
-                id="warningMinutes"
-                type="number"
-                value={warningMinutes}
-                onChange={(e) => setWarningMinutes(parseInt(e.target.value) || 5)}
-                min="1"
-                className="h-9 text-sm"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="taskDescription" className="text-sm">Mô tả nhiệm vụ</Label>
-              <textarea
-                id="taskDescription"
-                value={taskDescription}
-                onChange={(e) => setTaskDescription(e.target.value)}
-                className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder="Nhập mô tả nhiệm vụ..."
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="notes" className="text-sm">Ghi chú</Label>
+              <Label htmlFor="notes" className="text-xs md:text-sm font-medium">Ghi chú đơn hàng</Label>
               <textarea
                 id="notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                rows={3}
+                className="flex w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                 placeholder="Ghi chú đặc biệt cho đơn hàng..."
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-sm">Tài liệu đính kèm</Label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-gray-400 transition-colors">
-                <input
-                  type="file"
-                  id="attachments"
-                  multiple
-                  onChange={handleFileChange}
-                  accept=".pdf,.doc,.docx,.xls,.xlsx"
-                  className="hidden"
-                />
-                <label htmlFor="attachments" className="cursor-pointer">
-                  <div className="flex flex-col items-center py-2">
-                    <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                    <p className="text-sm text-gray-600">Click để tải lên tài liệu</p>
-                    <p className="text-xs text-gray-500 mt-1">Hỗ trợ: PDF, DOC, DOCX, XLS, XLSX</p>
-                  </div>
-                </label>
-
-                {/* Display uploaded files */}
-                {attachments.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {attachments.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <svg className="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                          <span className="text-sm text-gray-700 truncate">{file.name}</span>
-                          <span className="text-xs text-gray-500 flex-shrink-0">
-                            ({(file.size / 1024).toFixed(1)} KB)
-                          </span>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeAttachment(index)}
-                          className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <Label htmlFor="deliveryTime" className="text-xs md:text-sm font-medium">Thời gian giao hàng</Label>
+              <Input
+                id="deliveryTime"
+                type="datetime-local"
+                value={deliveryTime}
+                onChange={(e) => setDeliveryTime(e.target.value)}
+                className="h-9 md:h-10 text-sm"
+              />
             </div>
           </div>
 
@@ -580,7 +358,10 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess }: CreateOrder
               Hủy
             </Button>
             <Button type="submit" disabled={isLoading} className="h-9 text-sm">
-              {isLoading ? "Đang tạo..." : "Tạo đơn"}
+              {isLoading
+                ? (editMode ? "Đang cập nhật..." : "Đang tạo...")
+                : (editMode ? "Cập nhật" : "Tạo đơn")
+              }
             </Button>
           </DialogFooter>
         </form>
