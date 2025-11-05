@@ -72,17 +72,23 @@ const websocketMiddleware: Middleware = (store) => (next) => (action) => {
 
           case 'order_image_uploaded':
             console.log('🖼️ Order image uploaded:', data);
-            // Optionally refetch the order to get updated images
+            // Dispatch action to update order in Redux
+            store.dispatch(orderUpdatedWS(data.order));
+            toast.info('Ảnh đã được tải lên');
             break;
 
           case 'order_image_deleted':
             console.log('🗑️ Order image deleted:', data);
-            // Optionally refetch the order to get updated images
+            // Dispatch action to update order in Redux
+            store.dispatch(orderUpdatedWS(data.order));
+            toast.info('Ảnh đã được xóa');
             break;
 
           case 'order_assigned':
             console.log('👥 Order assigned:', data);
-            // Optionally refetch the order to get updated assignments
+            // Dispatch action to update order in Redux
+            store.dispatch(orderUpdatedWS(data.order));
+            toast.info('Đã cập nhật phân công nhân viên');
             break;
 
           default:
