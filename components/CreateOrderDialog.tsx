@@ -442,25 +442,18 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess }: CreateOrder
           {/* Fees */}
           <div className="space-y-3">
             <h3 className="font-semibold text-base">Chi phí</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="shippingFee" className="text-sm">Phí ship</Label>
-                <Input
-                  id="shippingFee"
-                  type="number"
-                  value={shippingFee}
-                  onChange={(e) => setShippingFee(parseFloat(e.target.value) || 0)}
-                  min="0"
-                  step="1000"
-                  className="h-9 text-sm"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-sm">Tổng tiền</Label>
-                <div className="h-9 px-3 py-2 border rounded-md bg-muted font-semibold text-sm flex items-center">
-                  {calculateTotal().toLocaleString("vi-VN")}đ
-                </div>
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="shippingFee" className="text-sm">Phí ship</Label>
+              <Input
+                id="shippingFee"
+                type="number"
+                value={shippingFee === 0 ? "" : shippingFee}
+                onChange={(e) => setShippingFee(e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                placeholder="0"
+                min="0"
+                step="1000"
+                className="h-9 text-sm"
+              />
             </div>
           </div>
 
