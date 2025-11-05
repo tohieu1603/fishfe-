@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Plus, Search, ChevronDown, User, ChevronRight, Check, Calendar, ChevronLeft } from "lucide-react";
@@ -22,23 +22,17 @@ import { OverdueOrdersAlert } from "@/components/OverdueOrdersAlert";
 import { Order, OrderStatus } from "@/types";
 import { PROCESS_STAGES } from "@/lib/constants";
 import { orderApi } from "@/lib/api";
-import { useStore } from "@/store/useStore";
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks";
+import { fetchOrders, setFilters, updateOrderStatus } from "@/lib/redux/slices/ordersSlice";
 import { toast } from "sonner";
 
 function HomePage() {
-  const {
-    orders,
-    setOrders,
-    updateOrder,
-    filters,
-    setFilters,
-    isCreateDialogOpen,
-    setCreateDialogOpen,
-    selectedOrderId,
-    setSelectedOrderId,
-    isLoading,
-    setLoading,
-  } = useStore();
+  const dispatch = useAppDispatch();
+  const { items: orders, loading: isLoading, filters } = useAppSelector((state) => state.orders);
+
+  // Local UI state
+  const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
 
   const [localSearch, setLocalSearch] = useState("");
   const [showTransitionDialog, setShowTransitionDialog] = useState(false);
@@ -50,25 +44,10 @@ function HomePage() {
   const [showRightArrow, setShowRightArrow] = useState(false);
   const kanbanScrollRef = useRef<HTMLDivElement>(null);
 
-  const fetchOrders = useCallback(async () => {
-    try {
-      setLoading(true);
-      console.log("Fetching orders with filters:", filters);
-      const response = await orderApi.getOrders(filters);
-      console.log("Fetched orders:", response.items.length, "orders");
-      setOrders(response.items);
-    } catch (error) {
-      console.error("Failed to fetch orders:", error);
-      setOrders([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, setLoading, setOrders]);
-
-  // Fetch orders on mount
+  // Fetch orders on mount and when filters change
   useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+    dispatch(fetchOrders(filters));
+  }, [dispatch, filters]);
 
   const handleOrderDrop = async (order: Order, newStatus: OrderStatus) => {
     // Open confirmation dialog instead of directly updating

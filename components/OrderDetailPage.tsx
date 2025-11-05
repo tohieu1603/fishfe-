@@ -107,6 +107,8 @@ export function OrderDetailPage({ orderId, onClose }: OrderDetailPageProps) {
       toast.success("Chuyển trạng thái thành công!");
     } catch (error: any) {
       console.error("Failed to transition order:", error);
+      console.error("Error response data:", error?.response?.data);
+      console.error("Error detail:", error?.response?.data?.detail);
       toast.error(`Không thể chuyển trạng thái. ${error?.response?.data?.detail || "Vui lòng thử lại!"}`);
     }
   };
