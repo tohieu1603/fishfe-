@@ -9,9 +9,9 @@ import { useEffect } from 'react';
 
 export function ReduxProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    // Connect to WebSocket when app loads
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws/orders/';
-    store.dispatch({ type: 'websocket/connect', payload: wsUrl });
+    // Connect to Socket.IO server when app loads
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKETIO_URL || 'http://localhost:4000';
+    store.dispatch({ type: 'websocket/connect', payload: socketUrl });
 
     // Cleanup on unmount
     return () => {

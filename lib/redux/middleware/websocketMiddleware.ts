@@ -78,45 +78,66 @@ const websocketMiddleware: Middleware = (store) => (next) => (action: unknown) =
           case 'order_created':
             console.log('🆕 Order created:', data.order);
             store.dispatch(orderCreatedWS(data.order));
-            toast.success(`Đơn hàng mới: #${data.order.order_number}`);
+            toast.success(`🆕 Đơn hàng mới: #${data.order.order_number}`, {
+              description: `Khách hàng: ${data.order.customer_name}`,
+              duration: 5000,
+            });
             break;
 
           case 'order_updated':
             console.log('🔄 Order updated:', data.order);
             store.dispatch(orderUpdatedWS(data.order));
+            toast.info(`✏️ Đơn #${data.order.order_number} đã được cập nhật`, {
+              description: `Khách hàng: ${data.order.customer_name}`,
+              duration: 4000,
+            });
             break;
 
           case 'order_deleted':
             console.log('🗑️ Order deleted:', data.order_id);
             store.dispatch(orderDeletedWS(parseInt(data.order_id)));
-            toast.info('Đơn hàng đã bị xóa');
+            toast.error(`🗑️ Đơn hàng đã bị xóa`, {
+              duration: 4000,
+            });
             break;
 
           case 'order_status_changed':
             console.log('🔄 Order status changed:', data);
             store.dispatch(orderStatusChangedWS(data.order));
-            toast.info(`Đơn #${data.order.order_number} đã chuyển trạng thái`);
+            toast.info(`🔄 Đơn #${data.order.order_number} → ${data.new_status}`, {
+              description: `Khách hàng: ${data.order.customer_name}`,
+              duration: 4000,
+            });
             break;
 
           case 'order_image_uploaded':
             console.log('🖼️ Order image uploaded:', data);
             // Dispatch action to update order in Redux
             store.dispatch(orderUpdatedWS(data.order));
-            toast.info('Ảnh đã được tải lên');
+            toast.success(`📸 Đơn #${data.order.order_number} - Đã thêm ảnh`, {
+              description: `Khách hàng: ${data.order.customer_name}`,
+              duration: 4000,
+            });
             break;
 
           case 'order_image_deleted':
             console.log('🗑️ Order image deleted:', data);
             // Dispatch action to update order in Redux
             store.dispatch(orderUpdatedWS(data.order));
-            toast.info('Ảnh đã được xóa');
+            toast.info(`🖼️ Đơn #${data.order.order_number} - Đã xóa ảnh`, {
+              description: `Khách hàng: ${data.order.customer_name}`,
+              duration: 4000,
+            });
             break;
 
           case 'order_assigned':
             console.log('👥 Order assigned:', data);
             // Dispatch action to update order in Redux
             store.dispatch(orderUpdatedWS(data.order));
-            toast.info('Đã cập nhật phân công nhân viên');
+            toast.info(`👥 Đơn #${data.order.order_number} - Đã phân công`, {
+              description: `Khách hàng: ${data.order.customer_name}`,
+              duration: 4000,
+            });
             break;
 
           default:

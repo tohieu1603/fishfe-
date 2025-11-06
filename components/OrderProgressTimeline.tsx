@@ -51,11 +51,13 @@ export function OrderProgressTimeline({ order, onTransition }: OrderProgressTime
       {PROCESS_STAGES.filter(stage =>
         stage.status !== OrderStatus.COMPLETED && stage.status !== OrderStatus.FAILED
       ).map((stage, index) => {
-        const isPast = index < currentIndex;
-        const isCurrent = index === currentIndex;
-        const isFuture = index > currentIndex;
+        // Check if this stage actually exists in status_history
+        const hasBeenInThisStage = order.status_history?.some(h => h.status === stage.status) || false;
 
-        const stageTime = isPast || isCurrent ? getStageTime(stage.status) : null;
+        const isPast = hasBeenInThisStage && index < currentIndex;
+        const isCurrent = index === currentIndex;
+
+        const stageTime = (isPast || isCurrent) && hasBeenInThisStage ? getStageTime(stage.status) : null;
 
         return (
           <div key={stage.status} className="relative">

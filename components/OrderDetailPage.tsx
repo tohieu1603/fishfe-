@@ -14,6 +14,7 @@ import { SwipeButton } from "@/components/SwipeButton";
 import { PrintDialog } from "@/components/PrintDialog";
 import { AssignUsersDialog } from "@/components/AssignUsersDialog";
 import { CreateOrderDialog } from "@/components/CreateOrderDialog";
+import { OrderChat } from "@/components/OrderChat";
 import { getNextStatus } from "@/lib/constants";
 import { toast } from "sonner";
 
@@ -43,7 +44,7 @@ const getImageUrl = (imagePath: string): string => {
 
 export function OrderDetailPage({ orderId, onClose }: OrderDetailPageProps) {
   const [order, setOrder] = useState<Order | null>(null);
-  const [activeTab, setActiveTab] = useState<"info" | "products" | "images" | "activities">("info");
+  const [activeTab, setActiveTab] = useState<"info" | "products" | "images" | "activities" | "chat">("info");
   const [isLoading, setIsLoading] = useState(true);
   const [showTransitionDialog, setShowTransitionDialog] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
@@ -324,6 +325,16 @@ export function OrderDetailPage({ orderId, onClose }: OrderDetailPageProps) {
                     </span>
                   )}
                 </button>
+                <button
+                  onClick={() => setActiveTab("chat")}
+                  className={`px-4 md:px-6 py-2.5 md:py-3 text-xs md:text-sm font-medium border-b-2 ${
+                    activeTab === "chat"
+                      ? "border-black text-black"
+                      : "border-transparent text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  💬 Thảo luận
+                </button>
               </div>
             </div>
 
@@ -586,6 +597,12 @@ export function OrderDetailPage({ orderId, onClose }: OrderDetailPageProps) {
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Lịch sử hoạt động</h3>
                   <ActivityTimeline activities={activities} />
+                </div>
+              )}
+
+              {activeTab === "chat" && (
+                <div>
+                  <OrderChat orderId={orderId} />
                 </div>
               )}
             </div>

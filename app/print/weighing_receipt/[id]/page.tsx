@@ -287,9 +287,9 @@ export default function WeighingReceiptPrintPage() {
                     <td style={{ textAlign: "center" }}>{idx + 1}</td>
                     <td>
                       <div>{item.product_name}</div>
-                      {item.notes && (
+                      {item.note && (
                         <div style={{ fontSize: "11px", color: "#666", marginTop: "2mm" }}>
-                          Ghi chú: {item.notes}
+                          Ghi chú: {item.note}
                         </div>
                       )}
                     </td>
@@ -329,7 +329,7 @@ export default function WeighingReceiptPrintPage() {
               <div className="images-grid">
                 {weighingImages.slice(0, 4).map((img, idx) => (
                   <div key={idx} className="image-container">
-                    <img src={img.image_url} alt={`Ảnh cân ${idx + 1}`} />
+                    <img src={img.image} alt={`Ảnh cân ${idx + 1}`} />
                     <div className="image-label">Ảnh {idx + 1}</div>
                   </div>
                 ))}

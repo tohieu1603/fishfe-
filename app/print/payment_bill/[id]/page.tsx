@@ -240,9 +240,9 @@ export default function PaymentBillPrintPage() {
                     </span>
                   </div>
                 </div>
-                {item.notes && (
+                {item.note && (
                   <div style={{ fontSize: "10px", paddingLeft: "3mm", color: "#666", marginTop: "1mm" }}>
-                    * {item.notes}
+                    * {item.note}
                   </div>
                 )}
               </div>

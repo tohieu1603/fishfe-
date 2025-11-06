@@ -199,9 +199,9 @@ export default function OrderBillPrintPage() {
                   </span>
                   <span>x{item.quantity}</span>
                 </div>
-                {item.notes && (
+                {item.note && (
                   <div style={{ fontSize: "10px", paddingLeft: "5mm", color: "#666" }}>
-                    Ghi chú: {item.notes}
+                    Ghi chú: {item.note}
                   </div>
                 )}
               </div>
