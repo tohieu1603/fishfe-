@@ -47,7 +47,27 @@ export function OrderProgressTimeline({ order, onTransition }: OrderProgressTime
   };
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-4">
+      {/* Overall Progress Bar */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs text-gray-600">
+          <span className="font-medium">Tiến độ tổng thể</span>
+          <span className="font-semibold text-blue-600">
+            {Math.round(((currentIndex + 1) / PROCESS_STAGES.filter(s => s.status !== OrderStatus.COMPLETED && s.status !== OrderStatus.FAILED).length) * 100)}%
+          </span>
+        </div>
+        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-green-500 to-blue-500 rounded-full transition-all duration-500"
+            style={{
+              width: `${((currentIndex + 1) / PROCESS_STAGES.filter(s => s.status !== OrderStatus.COMPLETED && s.status !== OrderStatus.FAILED).length) * 100}%`,
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Timeline */}
+      <div className="space-y-1">
       {PROCESS_STAGES.filter(stage =>
         stage.status !== OrderStatus.COMPLETED && stage.status !== OrderStatus.FAILED
       ).map((stage, index) => {
@@ -64,8 +84,8 @@ export function OrderProgressTimeline({ order, onTransition }: OrderProgressTime
             {/* Connecting Line */}
             {index > 0 && (
               <div
-                className={`absolute left-3 top-0 w-0.5 h-4 -mt-4 ${
-                  isPast ? "bg-green-500" : "bg-gray-200"
+                className={`absolute left-3 top-0 w-1 h-4 -mt-4 ${
+                  isPast ? "bg-green-500" : isCurrent ? "bg-blue-400" : "bg-gray-300"
                 }`}
               />
             )}
@@ -79,15 +99,15 @@ export function OrderProgressTimeline({ order, onTransition }: OrderProgressTime
                     : "bg-blue-50 border-2 border-blue-300"
                   : isPast
                     ? stageTime?.isOverdue
-                      ? "bg-orange-50/50 border border-orange-200"
-                      : "bg-green-50/50 border border-green-200"
+                      ? "bg-orange-100 border-2 border-orange-400"
+                      : "bg-green-100 border-2 border-green-400"
                     : "bg-gray-50 border border-gray-200"
               }`}
             >
               {/* Status Icon */}
               <div className="flex-shrink-0 mt-0.5">
                 {isPast ? (
-                  <CheckCircle className="h-6 w-6 text-green-600" />
+                  <CheckCircle className="h-6 w-6 text-green-600 fill-green-600" />
                 ) : isCurrent ? (
                   stageTime?.isOverdue ? (
                     <div className="relative">
@@ -215,6 +235,7 @@ export function OrderProgressTimeline({ order, onTransition }: OrderProgressTime
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

@@ -168,14 +168,13 @@ export function ConfirmTransitionDialog({
     if (fromStatus === OrderStatus.PROCESSING && toStatus === OrderStatus.DELIVERY) {
       return {
         title: "Xác nhận chuyển sang Giao hàng",
-        description: "Chọn loại ship và nhập thông tin giao hàng.",
-        requireConfirm: false,
+        description: "Xác nhận đã chế biến xong và sẵn sàng giao hàng.",
+        requireConfirm: true,
+        confirmText: "Tôi xác nhận đã chế biến xong",
         requireImages: false,
         mustHaveImages: false,
         requirePhone: false,
-        requireTime: true,
-        timeLabel: "Thời gian giao hàng mong muốn",
-        requireShipping: true,
+        requireTime: false,
         requireAssignment: true,
       };
     }
@@ -184,13 +183,15 @@ export function ConfirmTransitionDialog({
     if (fromStatus === OrderStatus.DELIVERY && toStatus === OrderStatus.COMPLETED) {
       return {
         title: "Xác nhận Hoàn thành",
-        description: "Xác nhận đã giao hàng thành công cho khách.",
+        description: "Chọn loại ship, nhập thông tin giao hàng và xác nhận hoàn thành.",
         requireConfirm: true,
         confirmText: "Tôi xác nhận đã giao hàng thành công",
         requireImages: false,
         mustHaveImages: false,
         requirePhone: false,
-        requireTime: false,
+        requireTime: true,
+        timeLabel: "Thời gian giao hàng thực tế",
+        requireShipping: true,
       };
     }
 

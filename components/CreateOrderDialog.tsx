@@ -58,6 +58,8 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess, editMode = fa
   const [shippingFee, setShippingFee] = useState(0);
   const [notes, setNotes] = useState("");
   const [deliveryTime, setDeliveryTime] = useState(getCurrentDateTime());
+  const [receivedTime, setReceivedTime] = useState("");
+  const [kitchenTime, setKitchenTime] = useState("");
 
   // Employee assignment states
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
