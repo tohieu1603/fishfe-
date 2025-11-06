@@ -12,16 +12,25 @@ import {
 } from '../slices/ordersSlice';
 import { toast } from 'sonner';
 
+interface WebSocketAction {
+  type: string;
+  payload?: string;
+}
+
 let socket: WebSocket | null = null;
 let reconnectTimeout: NodeJS.Timeout | null = null;
+let heartbeatInterval: NodeJS.Timeout | null = null;
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY = 3000;
+const HEARTBEAT_INTERVAL = 30000; // Send ping every 30 seconds
 
-const websocketMiddleware: Middleware = (store) => (next) => (action) => {
+const websocketMiddleware: Middleware = (store) => (next) => (action: unknown) => {
+  const wsAction = action as WebSocketAction;
+
   // WebSocket connection actions
-  if (action.type === 'websocket/connect') {
-    const wsUrl = action.payload || 'ws://localhost:8000/ws/orders/';
+  if (wsAction.type === 'websocket/connect') {
+    const wsUrl = wsAction.payload || 'ws://localhost:8000/ws/orders/';
 
     if (socket !== null && socket.readyState !== WebSocket.CLOSED) {
       return next(action);
@@ -35,6 +44,20 @@ const websocketMiddleware: Middleware = (store) => (next) => (action) => {
       reconnectAttempts = 0;
       store.dispatch(setWebsocketConnected(true));
       toast.success('Realtime updates connected');
+
+      // Start heartbeat to keep connection alive
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+      }
+      heartbeatInterval = setInterval(() => {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({
+            type: 'ping',
+            timestamp: Date.now()
+          }));
+          console.log('💓 Heartbeat sent');
+        }
+      }, HEARTBEAT_INTERVAL);
     };
 
     socket.onmessage = (event) => {
@@ -43,6 +66,11 @@ const websocketMiddleware: Middleware = (store) => (next) => (action) => {
         console.log('📨 WebSocket message:', data);
 
         switch (data.type) {
+          case 'pong':
+            // Heartbeat response - connection is alive
+            console.log('💓 Heartbeat received');
+            break;
+
           case 'connection_established':
             console.log('✅ Connection established:', data.message);
             break;
@@ -108,6 +136,12 @@ const websocketMiddleware: Middleware = (store) => (next) => (action) => {
       console.log('🔌 WebSocket closed:', event.code, event.reason);
       store.dispatch(setWebsocketConnected(false));
 
+      // Clear heartbeat interval
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+      }
+
       // Auto-reconnect logic
       if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
         reconnectAttempts++;
@@ -125,7 +159,7 @@ const websocketMiddleware: Middleware = (store) => (next) => (action) => {
   }
 
   // WebSocket disconnect action
-  if (action.type === 'websocket/disconnect') {
+  if (wsAction.type === 'websocket/disconnect') {
     if (socket !== null) {
       console.log('🔌 Disconnecting WebSocket');
       socket.close();
@@ -134,6 +168,10 @@ const websocketMiddleware: Middleware = (store) => (next) => (action) => {
     if (reconnectTimeout) {
       clearTimeout(reconnectTimeout);
       reconnectTimeout = null;
+    }
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
     }
     store.dispatch(setWebsocketConnected(false));
   }

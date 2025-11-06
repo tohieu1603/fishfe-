@@ -449,7 +449,7 @@ function HomePage() {
               <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2 bg-gray-50">
                 {(() => {
                   const displayOrders = filters.status
-                    ? ordersByStatus[filters.status] || []
+                    ? (ordersByStatus[filters.status as OrderStatus] || [])
                     : orders;
 
                   if (displayOrders.length === 0) {

@@ -338,7 +338,7 @@ export default function DeliveryNotePrintPage() {
                     <td style={{ textAlign: "center", fontSize: "16px", fontWeight: "bold" }}>
                       {item.quantity}
                     </td>
-                    <td style={{ fontSize: "11px" }}>{item.notes || "-"}</td>
+                    <td style={{ fontSize: "11px" }}>{item.note || "-"}</td>
                   </tr>
                 ))}
               </tbody>

@@ -57,12 +57,14 @@ export interface Product {
 export interface OrderItem {
   id?: number;
   product?: Product;
+  product_id?: number;
   product_name: string;
   quantity: number;
   unit: string;
   unit_price: number;
   price: number; // Alias for unit_price
   total_price: number;
+  note?: string;
 }
 
 // Order Image Interface
