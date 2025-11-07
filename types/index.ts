@@ -94,6 +94,7 @@ export interface Order {
   customer_name: string;
   customer_phone: string;
   customer_address: string;
+  loyalty_phone?: string;
   assigned_to?: User[];
   created_by?: User;
   items: OrderItem[];

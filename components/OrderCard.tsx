@@ -84,8 +84,8 @@ export function OrderCard({ order, onClick, onTransition }: OrderCardProps) {
     order.status !== OrderStatus.DELIVERY;
 
   return (
+    <div ref={drag as any}>
     <Card
-      ref={drag}
       className={`cursor-grab active:cursor-grabbing hover:shadow-md transition-all rounded-xl overflow-hidden ${
         isDragging ? "opacity-50 rotate-2" : ""
       } ${
@@ -237,5 +237,6 @@ export function OrderCard({ order, onClick, onTransition }: OrderCardProps) {
         onConfirm={handleConfirmCancel}
       />
     </Card>
+    </div>
   );
 }

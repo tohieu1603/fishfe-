@@ -107,9 +107,9 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess, editMode = fa
         })));
       }
 
-      setShippingFee(orderToEdit.shipping_fee || 0);
+      setShippingFee(typeof orderToEdit.shipping_fee === 'number' ? orderToEdit.shipping_fee : parseFloat(String(orderToEdit.shipping_fee)) || 0);
       setNotes(orderToEdit.notes || "");
-      setDeliveryTime(formatDateTimeForInput(orderToEdit.delivery_time));
+      setDeliveryTime(formatDateTimeForInput(orderToEdit.delivery_time || ""));
 
       // Populate assigned users
       if (orderToEdit.assigned_to && orderToEdit.assigned_to.length > 0) {
@@ -199,9 +199,10 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess, editMode = fa
       // Call onSuccess after dialog is closed - WebSocket will handle the update
       console.log("Calling onSuccess - WebSocket will refresh the order...");
       onSuccess();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`Failed to ${editMode ? 'update' : 'create'} order:`, error);
-      toast.error(`Không thể ${editMode ? 'cập nhật' : 'tạo'} đơn hàng. ${error?.response?.data?.detail || "Vui lòng thử lại!"}`);
+      const errorMessage = error instanceof Error ? error.message : "Vui lòng thử lại!";
+      toast.error(`Không thể ${editMode ? 'cập nhật' : 'tạo'} đơn hàng. ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }

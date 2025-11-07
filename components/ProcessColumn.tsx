@@ -43,7 +43,7 @@ export function ProcessColumn({ stage, orders, onOrderClick, onOrderDrop, onOrde
   const overdueCount = overdueOrders.length;
 
   return (
-    <div ref={drop} className="flex flex-col min-w-[260px] sm:min-w-[280px] max-w-[260px] sm:max-w-[280px]">
+    <div ref={drop as any} className="flex flex-col min-w-[260px] sm:min-w-[280px] max-w-[260px] sm:max-w-[280px]">
       {/* Column Header - Compact */}
       <div className="bg-white rounded-t-xl border border-gray-200 p-3 mb-1.5">
         <div className="flex items-center justify-between mb-2">
