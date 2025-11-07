@@ -12,7 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Order } from "@/types";
-import { Printer, FileText, Receipt, Package } from "lucide-react";
+import { Printer, FileText, Receipt, Package, Download, FileDown } from "lucide-react";
+import { toast } from "sonner";
 
 interface PrintDialogProps {
   open: boolean;
@@ -71,6 +72,7 @@ export function PrintDialog({ open, onOpenChange, order }: PrintDialogProps) {
   const [selectedType, setSelectedType] = useState<PrintType>("order_bill");
   const [selectedSize, setSelectedSize] = useState<PaperSize>("K80");
   const [copies, setCopies] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
 
   const selectedOption = PRINT_OPTIONS.find((opt) => opt.type === selectedType);
 
@@ -99,6 +101,82 @@ export function PrintDialog({ open, onOpenChange, order }: PrintDialogProps) {
       `/print/${selectedType}/${order.id}?size=${selectedSize}&preview=true`,
       "_blank"
     );
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      setIsExporting(true);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+      const response = await fetch(
+        `${apiUrl}/orders/${order.id}/export-pdf?type=${selectedType}&size=${selectedSize}`,
+        {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Không thể xuất PDF");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${order.order_number}_${selectedType}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success("Đã xuất PDF thành công");
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      toast.error("Không thể xuất PDF");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportWord = async () => {
+    try {
+      setIsExporting(true);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+      const response = await fetch(
+        `${apiUrl}/orders/${order.id}/export-word?type=${selectedType}&size=${selectedSize}`,
+        {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Không thể xuất Word");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${order.order_number}_${selectedType}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success("Đã xuất Word thành công");
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error exporting Word:", error);
+      toast.error("Không thể xuất Word");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -232,28 +310,53 @@ export function PrintDialog({ open, onOpenChange, order }: PrintDialogProps) {
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0 pt-3 sm:pt-4 border-t border-gray-100">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="h-11 sm:h-9 text-sm font-medium flex-1 sm:flex-initial"
-          >
-            Hủy
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handlePreview}
-            className="h-11 sm:h-9 text-sm font-medium flex-1 sm:flex-initial"
-          >
-            Xem trước
-          </Button>
-          <Button
-            onClick={handlePrint}
-            className="h-11 sm:h-9 bg-black text-white hover:bg-gray-800 text-sm font-medium flex-1 sm:flex-initial"
-          >
-            <Printer className="h-4 w-4 mr-2" />
-            In ngay
-          </Button>
+        <DialogFooter className="flex-col sm:flex-row gap-2 pt-3 sm:pt-4 border-t border-gray-100">
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="h-11 sm:h-9 text-sm font-medium flex-1 sm:flex-initial"
+              disabled={isExporting}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handlePreview}
+              className="h-11 sm:h-9 text-sm font-medium flex-1 sm:flex-initial"
+              disabled={isExporting}
+            >
+              Xem trước
+            </Button>
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto sm:ml-auto">
+            <Button
+              variant="outline"
+              onClick={handleExportWord}
+              disabled={isExporting}
+              className="h-11 sm:h-9 text-sm font-medium flex-1 sm:flex-initial border-blue-300 text-blue-700 hover:bg-blue-50"
+            >
+              <FileDown className="h-4 w-4 mr-2" />
+              Word
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleExportPDF}
+              disabled={isExporting}
+              className="h-11 sm:h-9 text-sm font-medium flex-1 sm:flex-initial border-red-300 text-red-700 hover:bg-red-50"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              PDF
+            </Button>
+            <Button
+              onClick={handlePrint}
+              disabled={isExporting}
+              className="h-11 sm:h-9 bg-black text-white hover:bg-gray-800 text-sm font-medium flex-1 sm:flex-initial"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              In
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -14,8 +14,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ProcessColumn } from "@/components/ProcessColumn";
 import { CreateOrderDialog } from "@/components/CreateOrderDialog";
-import { OrderDetailPage } from "@/components/OrderDetailPage";
 import { ConfirmTransitionDialog } from "@/components/ConfirmTransitionDialog";
+import { useRouter } from "next/navigation";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { OverdueOrdersAlert } from "@/components/OverdueOrdersAlert";
@@ -27,21 +27,33 @@ import { fetchOrders, setFilters, updateOrderStatus } from "@/lib/redux/slices/o
 import { toast } from "sonner";
 
 function HomePage() {
+  const router = useRouter();
   const dispatch = useAppDispatch();
   const { items: orders, loading: isLoading, filters: reduxFilters } = useAppSelector((state) => state.orders);
 
   // Local UI state
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
-  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
 
   const [localSearch, setLocalSearch] = useState("");
+
+  // Helper function to get local date string (YYYY-MM-DD)
+  const getLocalDateString = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Initialize with today's date by default
+  const today = getLocalDateString(new Date());
   const [localFilters, setLocalFilters] = useState({
     search: "",
     status: undefined as OrderStatus | undefined,
     myOrders: false,
-    dateFrom: undefined as string | undefined,
-    dateTo: undefined as string | undefined,
+    dateFrom: today as string | undefined,
+    dateTo: today as string | undefined,
   });
+  const [quickFilterLabel, setQuickFilterLabel] = useState<string>("Hôm nay");
   const [showTransitionDialog, setShowTransitionDialog] = useState(false);
   const [pendingTransition, setPendingTransition] = useState<{
     order: Order;
@@ -54,13 +66,19 @@ function HomePage() {
   // Sync local filters to Redux with debounce
   useEffect(() => {
     const timer = setTimeout(() => {
-      dispatch(setFilters({
-        search: localFilters.search,
-        status: localFilters.status,
+      // Build filters object matching backend expectations
+      const filters = {
+        page: 1,
+        page_size: 100,
         assigned_to_me: localFilters.myOrders,
-        date_from: localFilters.dateFrom,
-        date_to: localFilters.dateTo,
-      }));
+        search: localFilters.search || undefined,
+        status: localFilters.status || undefined,
+        date_from: localFilters.dateFrom || undefined,
+        date_to: localFilters.dateTo || undefined,
+      };
+
+      console.log('🔍 Applying filters:', filters);
+      dispatch(setFilters(filters));
     }, 300);
     return () => clearTimeout(timer);
   }, [localFilters, dispatch]);
@@ -141,7 +159,7 @@ function HomePage() {
   };
 
   const handleOrderClick = (order: Order) => {
-    setSelectedOrderId(order.id);
+    router.push(`/orders/${order.id}`);
   };
 
   const handleSearchChange = (value: string) => {
@@ -188,13 +206,6 @@ function HomePage() {
   const completedOrders = ordersByStatus[OrderStatus.COMPLETED]?.length || 0;
   const failedOrders = ordersByStatus[OrderStatus.FAILED]?.length || 0;
   const activeOrders = totalOrders - completedOrders - failedOrders;
-
-  // Show order detail page if order is selected
-  if (selectedOrderId) {
-    return (
-      <OrderDetailPage orderId={selectedOrderId} onClose={() => setSelectedOrderId(null)} />
-    );
-  }
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -259,63 +270,73 @@ function HomePage() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="shrink-0">
                       <Calendar className="h-4 w-4 mr-2" />
-                      {localFilters.dateFrom || localFilters.dateTo ? "Đã lọc" : "Lọc nhanh"}
+                      {quickFilterLabel}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuItem
                       onClick={() => {
-                        const today = new Date().toISOString().split('T')[0];
-                        setLocalFilters({ ...localFilters, dateFrom: today, dateTo: today });
+                        const todayStr = getLocalDateString(new Date());
+                        setLocalFilters({ ...localFilters, dateFrom: todayStr, dateTo: todayStr });
+                        setQuickFilterLabel("Hôm nay");
                       }}
                       className="cursor-pointer"
                     >
-                      Hôm nay
+                      {quickFilterLabel === "Hôm nay" && <Check className="h-4 w-4 mr-2" />}
+                      <span className={quickFilterLabel !== "Hôm nay" ? "ml-6" : ""}>Hôm nay</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
-                        const today = new Date();
-                        const yesterday = new Date(today);
+                        const yesterday = new Date();
                         yesterday.setDate(yesterday.getDate() - 1);
-                        const dateStr = yesterday.toISOString().split('T')[0];
+                        const dateStr = getLocalDateString(yesterday);
                         setLocalFilters({ ...localFilters, dateFrom: dateStr, dateTo: dateStr });
+                        setQuickFilterLabel("Hôm qua");
                       }}
                       className="cursor-pointer"
                     >
-                      Hôm qua
+                      {quickFilterLabel === "Hôm qua" && <Check className="h-4 w-4 mr-2" />}
+                      <span className={quickFilterLabel !== "Hôm qua" ? "ml-6" : ""}>Hôm qua</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
                         const today = new Date();
-                        const weekAgo = new Date(today);
+                        const weekAgo = new Date();
                         weekAgo.setDate(weekAgo.getDate() - 7);
                         setLocalFilters({
                           ...localFilters,
-                          dateFrom: weekAgo.toISOString().split('T')[0],
-                          dateTo: today.toISOString().split('T')[0]
+                          dateFrom: getLocalDateString(weekAgo),
+                          dateTo: getLocalDateString(today)
                         });
+                        setQuickFilterLabel("7 ngày qua");
                       }}
                       className="cursor-pointer"
                     >
-                      7 ngày qua
+                      {quickFilterLabel === "7 ngày qua" && <Check className="h-4 w-4 mr-2" />}
+                      <span className={quickFilterLabel !== "7 ngày qua" ? "ml-6" : ""}>7 ngày qua</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
                         const today = new Date();
-                        const monthAgo = new Date(today);
+                        const monthAgo = new Date();
                         monthAgo.setDate(monthAgo.getDate() - 30);
                         setLocalFilters({
                           ...localFilters,
-                          dateFrom: monthAgo.toISOString().split('T')[0],
-                          dateTo: today.toISOString().split('T')[0]
+                          dateFrom: getLocalDateString(monthAgo),
+                          dateTo: getLocalDateString(today)
                         });
+                        setQuickFilterLabel("30 ngày qua");
                       }}
                       className="cursor-pointer"
                     >
-                      30 ngày qua
+                      {quickFilterLabel === "30 ngày qua" && <Check className="h-4 w-4 mr-2" />}
+                      <span className={quickFilterLabel !== "30 ngày qua" ? "ml-6" : ""}>30 ngày qua</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onClick={() => setLocalFilters({ ...localFilters, dateFrom: undefined, dateTo: undefined })}
+                      onClick={() => {
+                        setLocalFilters({ ...localFilters, dateFrom: undefined, dateTo: undefined });
+                        setQuickFilterLabel("Tất cả");
+                      }}
                       className="cursor-pointer text-red-600"
                     >
                       Xóa bộ lọc
@@ -408,7 +429,11 @@ function HomePage() {
 
               <div
                 ref={kanbanScrollRef}
-                className="flex gap-2 sm:gap-3 overflow-x-auto scrollbar-hide pb-4 h-full"
+                className="flex gap-2 sm:gap-3 overflow-x-auto pb-4 h-full"
+                style={{
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: '#CBD5E1 #F1F5F9',
+                }}
                 onScroll={checkScrollButtons}
               >
                 {PROCESS_STAGES.map((stage) => (
@@ -441,11 +466,11 @@ function HomePage() {
               <div className="flex overflow-x-auto gap-1.5 px-3 py-2 border-b bg-white">
                 {PROCESS_STAGES.map((stage) => {
                   const count = ordersByStatus[stage.status]?.length || 0;
-                  const isActive = filters.status === stage.status;
+                  const isActive = localFilters.status === stage.status;
                   return (
                     <button
                       key={stage.status}
-                      onClick={() => setFilters({ ...filters, status: isActive ? undefined : stage.status })}
+                      onClick={() => setLocalFilters({ ...localFilters, status: isActive ? undefined : stage.status })}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full whitespace-nowrap text-xs font-medium transition-colors ${
                         isActive
                           ? 'bg-black text-white'
@@ -466,8 +491,8 @@ function HomePage() {
               {/* Orders List - Compact */}
               <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2 bg-gray-50">
                 {(() => {
-                  const displayOrders = filters.status
-                    ? (ordersByStatus[filters.status as OrderStatus] || [])
+                  const displayOrders = localFilters.status
+                    ? (ordersByStatus[localFilters.status as OrderStatus] || [])
                     : orders;
 
                   if (displayOrders.length === 0) {

@@ -138,6 +138,17 @@ export interface FilterState {
   dateTo?: string;
 }
 
+// Order Filter Params (for API calls)
+export interface OrderFilterParams {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  status?: OrderStatus | string;
+  assigned_to_me?: boolean;
+  date_from?: string;
+  date_to?: string;
+}
+
 // Create Order Input
 export interface CreateOrderInput {
   customer_name: string;

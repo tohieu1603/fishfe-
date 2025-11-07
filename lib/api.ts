@@ -56,15 +56,24 @@ apiClient.interceptors.response.use(
 
 // Order API
 export const orderApi = {
-  // Get all orders with filters
-  getOrders: async (filters?: FilterState, page = 1, pageSize = 100) => {
+  // Get all orders with filters - accepts both FilterState and OrderFilterParams
+  getOrders: async (filters?: any, page = 1, pageSize = 100) => {
     const params: any = { page, page_size: pageSize };
 
     if (filters?.search) params.search = filters.search;
     if (filters?.status) params.status = filters.status;
+
+    // Support both myOrders and assigned_to_me
     if (filters?.myOrders) params.assigned_to_me = true;
+    if (filters?.assigned_to_me) params.assigned_to_me = true;
+
+    // Support both dateFrom/dateTo and date_from/date_to
     if (filters?.dateFrom) params.date_from = filters.dateFrom;
     if (filters?.dateTo) params.date_to = filters.dateTo;
+    if (filters?.date_from) params.date_from = filters.date_from;
+    if (filters?.date_to) params.date_to = filters.date_to;
+
+    console.log('📤 API Request params:', params);
 
     const response = await apiClient.get<PaginatedResponse<Order>>("/orders/", { params });
     return response.data;
