@@ -15,6 +15,8 @@ import {
   ChevronDown,
   User as UserIcon,
   BarChart3,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -42,6 +44,7 @@ const navigation: NavItem[] = [
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
@@ -57,15 +60,36 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar for desktop */}
-      <aside className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col bg-white border-r border-gray-200">
+      <aside className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col bg-white border-r border-gray-200 transition-all duration-300 ${
+        sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'
+      }`}>
         <div className="flex flex-col flex-grow pt-5 pb-4 overflow-y-auto">
-          {/* Logo */}
-          <div className="flex items-center flex-shrink-0 px-6 mb-6">
-            <div className="text-3xl mr-3">🦞</div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Seefood</h1>
-              <p className="text-xs text-gray-500">Quản lý hải sản</p>
+          {/* Logo and Toggle Button */}
+          <div className="flex items-center justify-between px-3 mb-6">
+            <div className={`flex items-center flex-shrink-0 transition-opacity duration-300 ${
+              sidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100 px-3'
+            }`}>
+              <div className="text-3xl mr-3">🦞</div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Seefood</h1>
+                <p className="text-xs text-gray-500">Quản lý hải sản</p>
+              </div>
             </div>
+
+            {/* Collapse/Expand button */}
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+                sidebarCollapsed ? 'mx-auto' : ''
+              }`}
+              title={sidebarCollapsed ? 'Mở rộng' : 'Thu gọn'}
+            >
+              {sidebarCollapsed ? (
+                <ChevronRight className="w-5 h-5 text-gray-600" />
+              ) : (
+                <ChevronLeft className="w-5 h-5 text-gray-600" />
+              )}
+            </button>
           </div>
 
           {/* Navigation */}
@@ -77,16 +101,29 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   key={item.name}
                   href={item.href}
                   className={`
-                    flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors
+                    flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors relative group
                     ${
                       isActive
                         ? "bg-primary text-primary-foreground"
                         : "text-gray-700 hover:bg-gray-100"
                     }
+                    ${sidebarCollapsed ? 'justify-center' : ''}
                   `}
+                  title={sidebarCollapsed ? item.name : ''}
                 >
                   {item.icon}
-                  <span className="ml-3">{item.name}</span>
+                  <span className={`transition-all duration-300 ${
+                    sidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100 ml-3'
+                  }`}>
+                    {item.name}
+                  </span>
+
+                  {/* Tooltip when collapsed */}
+                  {sidebarCollapsed && (
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                      {item.name}
+                    </div>
+                  )}
                 </Link>
               );
             })}
@@ -95,13 +132,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           {/* User section at bottom */}
           {user && (
             <div className="flex-shrink-0 px-3 pb-3">
-              <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+              <div className={`flex items-center p-3 bg-gray-50 rounded-lg ${
+                sidebarCollapsed ? 'justify-center' : ''
+              }`}>
                 <Avatar className="h-9 w-9">
                   <AvatarFallback className="bg-primary text-primary-foreground text-sm">
                     {getInitials(user.full_name || user.username)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="ml-3 flex-1 min-w-0">
+                <div className={`ml-3 flex-1 min-w-0 transition-all duration-300 ${
+                  sidebarCollapsed ? 'opacity-0 w-0 ml-0' : 'opacity-100'
+                }`}>
                   <p className="text-sm font-medium text-gray-900 truncate">
                     {user.full_name || user.username}
                   </p>
@@ -165,7 +206,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className={`transition-all duration-300 ${
+        sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'
+      }`}>
         {/* Top header */}
         <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
           {/* Mobile menu button */}

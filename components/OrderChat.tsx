@@ -11,6 +11,7 @@ import type { Comment } from '@/types/comment';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { ImagePlus } from 'lucide-react';
 
 interface OrderChatProps {
   orderId: number;
@@ -254,7 +255,7 @@ export function OrderChat({ orderId }: OrderChatProps) {
               sending ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
-            <span className="text-xl">📷</span>
+            <ImagePlus className="h-5 w-5 text-gray-600" />
             <input
               ref={fileInputRef}
               type="file"
