@@ -13,6 +13,10 @@ interface OrderProgressTimelineProps {
 export function OrderProgressTimeline({ order, onTransition }: OrderProgressTimelineProps) {
   const currentIndex = PROCESS_STAGES.findIndex((s) => s.status === order.status);
 
+  // Check if order is completed or failed
+  const isCompleted = order.status === OrderStatus.COMPLETED;
+  const isFailed = order.status === OrderStatus.FAILED;
+
   // Get next status for transition button
   const nextStatus = currentIndex >= 0 && currentIndex < PROCESS_STAGES.length - 1
     ? PROCESS_STAGES[currentIndex + 1]
@@ -46,21 +50,33 @@ export function OrderProgressTimeline({ order, onTransition }: OrderProgressTime
     };
   };
 
+  // Calculate progress percentage
+  const totalStages = PROCESS_STAGES.filter(s => s.status !== OrderStatus.COMPLETED && s.status !== OrderStatus.FAILED).length;
+  const progressPercentage = isCompleted ? 100 : isFailed ? 0 : Math.round(((currentIndex + 1) / totalStages) * 100);
+
   return (
     <div className="space-y-4">
       {/* Overall Progress Bar */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs text-gray-600">
           <span className="font-medium">Tiến độ tổng thể</span>
-          <span className="font-semibold text-blue-600">
-            {Math.round(((currentIndex + 1) / PROCESS_STAGES.filter(s => s.status !== OrderStatus.COMPLETED && s.status !== OrderStatus.FAILED).length) * 100)}%
+          <span className={`font-semibold ${
+            isCompleted ? "text-green-600" : isFailed ? "text-red-600" : "text-blue-600"
+          }`}>
+            {progressPercentage}%
           </span>
         </div>
         <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-green-500 to-blue-500 rounded-full transition-all duration-500"
+            className={`h-full rounded-full transition-all duration-500 ${
+              isCompleted
+                ? "bg-gradient-to-r from-green-500 to-green-600"
+                : isFailed
+                  ? "bg-gradient-to-r from-red-500 to-red-600"
+                  : "bg-gradient-to-r from-green-500 to-blue-500"
+            }`}
             style={{
-              width: `${((currentIndex + 1) / PROCESS_STAGES.filter(s => s.status !== OrderStatus.COMPLETED && s.status !== OrderStatus.FAILED).length) * 100}%`,
+              width: `${progressPercentage}%`,
             }}
           />
         </div>

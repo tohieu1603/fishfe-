@@ -28,13 +28,20 @@ import { toast } from "sonner";
 
 function HomePage() {
   const dispatch = useAppDispatch();
-  const { items: orders, loading: isLoading, filters } = useAppSelector((state) => state.orders);
+  const { items: orders, loading: isLoading, filters: reduxFilters } = useAppSelector((state) => state.orders);
 
   // Local UI state
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
 
   const [localSearch, setLocalSearch] = useState("");
+  const [localFilters, setLocalFilters] = useState({
+    search: "",
+    status: undefined as OrderStatus | undefined,
+    myOrders: false,
+    dateFrom: undefined as string | undefined,
+    dateTo: undefined as string | undefined,
+  });
   const [showTransitionDialog, setShowTransitionDialog] = useState(false);
   const [pendingTransition, setPendingTransition] = useState<{
     order: Order;
@@ -44,10 +51,24 @@ function HomePage() {
   const [showRightArrow, setShowRightArrow] = useState(false);
   const kanbanScrollRef = useRef<HTMLDivElement>(null);
 
-  // Fetch orders on mount and when filters change
+  // Sync local filters to Redux with debounce
   useEffect(() => {
-    dispatch(fetchOrders(filters));
-  }, [dispatch, filters]);
+    const timer = setTimeout(() => {
+      dispatch(setFilters({
+        search: localFilters.search,
+        status: localFilters.status,
+        assigned_to_me: localFilters.myOrders,
+        date_from: localFilters.dateFrom,
+        date_to: localFilters.dateTo,
+      }));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [localFilters, dispatch]);
+
+  // Fetch orders when Redux filters change
+  useEffect(() => {
+    dispatch(fetchOrders(reduxFilters));
+  }, [dispatch, reduxFilters]);
 
   const handleOrderDrop = async (order: Order, newStatus: OrderStatus) => {
     // Open confirmation dialog instead of directly updating
@@ -125,10 +146,7 @@ function HomePage() {
 
   const handleSearchChange = (value: string) => {
     setLocalSearch(value);
-    const timer = setTimeout(() => {
-      setFilters({ ...filters, search: value });
-    }, 500);
-    return () => clearTimeout(timer);
+    setLocalFilters({ ...localFilters, search: value });
   };
 
   const checkScrollButtons = () => {
@@ -221,16 +239,16 @@ function HomePage() {
                 <div className="flex items-center gap-1 shrink-0">
                   <Input
                     type="date"
-                    value={filters.dateFrom || ""}
-                    onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+                    value={localFilters.dateFrom || ""}
+                    onChange={(e) => setLocalFilters({ ...localFilters, dateFrom: e.target.value })}
                     className="h-9 md:h-10 w-[140px] text-sm"
                     placeholder="Từ ngày"
                   />
                   <span className="text-gray-500 text-sm">-</span>
                   <Input
                     type="date"
-                    value={filters.dateTo || ""}
-                    onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+                    value={localFilters.dateTo || ""}
+                    onChange={(e) => setLocalFilters({ ...localFilters, dateTo: e.target.value })}
                     className="h-9 md:h-10 w-[140px] text-sm"
                     placeholder="Đến ngày"
                   />
@@ -241,14 +259,14 @@ function HomePage() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="shrink-0">
                       <Calendar className="h-4 w-4 mr-2" />
-                      {filters.dateFrom || filters.dateTo ? "Đã lọc" : "Lọc nhanh"}
+                      {localFilters.dateFrom || localFilters.dateTo ? "Đã lọc" : "Lọc nhanh"}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuItem
                       onClick={() => {
                         const today = new Date().toISOString().split('T')[0];
-                        setFilters({ ...filters, dateFrom: today, dateTo: today });
+                        setLocalFilters({ ...localFilters, dateFrom: today, dateTo: today });
                       }}
                       className="cursor-pointer"
                     >
@@ -260,7 +278,7 @@ function HomePage() {
                         const yesterday = new Date(today);
                         yesterday.setDate(yesterday.getDate() - 1);
                         const dateStr = yesterday.toISOString().split('T')[0];
-                        setFilters({ ...filters, dateFrom: dateStr, dateTo: dateStr });
+                        setLocalFilters({ ...localFilters, dateFrom: dateStr, dateTo: dateStr });
                       }}
                       className="cursor-pointer"
                     >
@@ -271,8 +289,8 @@ function HomePage() {
                         const today = new Date();
                         const weekAgo = new Date(today);
                         weekAgo.setDate(weekAgo.getDate() - 7);
-                        setFilters({
-                          ...filters,
+                        setLocalFilters({
+                          ...localFilters,
                           dateFrom: weekAgo.toISOString().split('T')[0],
                           dateTo: today.toISOString().split('T')[0]
                         });
@@ -286,8 +304,8 @@ function HomePage() {
                         const today = new Date();
                         const monthAgo = new Date(today);
                         monthAgo.setDate(monthAgo.getDate() - 30);
-                        setFilters({
-                          ...filters,
+                        setLocalFilters({
+                          ...localFilters,
                           dateFrom: monthAgo.toISOString().split('T')[0],
                           dateTo: today.toISOString().split('T')[0]
                         });
@@ -297,7 +315,7 @@ function HomePage() {
                       30 ngày qua
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onClick={() => setFilters({ ...filters, dateFrom: undefined, dateTo: undefined })}
+                      onClick={() => setLocalFilters({ ...localFilters, dateFrom: undefined, dateTo: undefined })}
                       className="cursor-pointer text-red-600"
                     >
                       Xóa bộ lọc
@@ -309,31 +327,31 @@ function HomePage() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="min-w-[140px] justify-between shrink-0">
-                      {filters.status
-                        ? PROCESS_STAGES.find((s) => s.status === filters.status)?.label
+                      {localFilters.status
+                        ? PROCESS_STAGES.find((s) => s.status === localFilters.status)?.label
                         : "Tất cả trạng thái"}
                       <ChevronDown className="h-4 w-4 ml-2" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuItem
-                      onClick={() => setFilters({ ...filters, status: undefined })}
+                      onClick={() => setLocalFilters({ ...localFilters, status: undefined })}
                       className="cursor-pointer"
                     >
                       <Check
-                        className={`mr-2 h-4 w-4 ${!filters.status ? "opacity-100" : "opacity-0"}`}
+                        className={`mr-2 h-4 w-4 ${!localFilters.status ? "opacity-100" : "opacity-0"}`}
                       />
                       Tất cả trạng thái
                     </DropdownMenuItem>
                     {PROCESS_STAGES.map((stage) => (
                       <DropdownMenuItem
                         key={stage.status}
-                        onClick={() => setFilters({ ...filters, status: stage.status })}
+                        onClick={() => setLocalFilters({ ...localFilters, status: stage.status })}
                         className="cursor-pointer"
                       >
                         <Check
                           className={`mr-2 h-4 w-4 ${
-                            filters.status === stage.status ? "opacity-100" : "opacity-0"
+                            localFilters.status === stage.status ? "opacity-100" : "opacity-0"
                           }`}
                         />
                         {stage.label}
@@ -343,8 +361,8 @@ function HomePage() {
                 </DropdownMenu>
 
                 <Button
-                  variant={filters.myOrders ? "default" : "outline"}
-                  onClick={() => setFilters({ ...filters, myOrders: !filters.myOrders })}
+                  variant={localFilters.myOrders ? "default" : "outline"}
+                  onClick={() => setLocalFilters({ ...localFilters, myOrders: !localFilters.myOrders })}
                   size="sm"
                   className="shrink-0"
                 >
