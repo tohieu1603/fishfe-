@@ -210,7 +210,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'
       }`}>
         {/* Top header */}
-        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
           {/* Mobile menu button */}
           <button
             type="button"
@@ -231,19 +231,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           {/* User menu */}
           {user && (
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-x-2 rounded-full p-1.5 hover:bg-gray-100 transition-colors">
-                <Avatar className="h-8 w-8">
+              <DropdownMenuTrigger className="flex items-center gap-x-2 rounded-full p-1.5 hover:bg-gray-100 transition-colors flex-shrink-0">
+                <Avatar className="h-8 w-8 flex-shrink-0">
                   <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                     {getInitials(user.full_name || user.username)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="hidden sm:block text-left">
-                  <p className="text-sm font-medium text-gray-900">
+                <div className="hidden md:block text-left min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate max-w-[150px]">
                     {user.full_name || user.username}
                   </p>
-                  <p className="text-xs text-gray-500">{user.role}</p>
+                  <p className="text-xs text-gray-500 truncate">{user.role}</p>
                 </div>
-                <ChevronDown className="h-4 w-4 text-gray-500 hidden sm:block" />
+                <ChevronDown className="h-4 w-4 text-gray-500 hidden md:block flex-shrink-0" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
