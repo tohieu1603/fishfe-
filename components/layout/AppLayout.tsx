@@ -37,7 +37,6 @@ interface NavItem {
 const navigation: NavItem[] = [
   { name: "Trang chủ", href: "/", icon: <Home className="w-5 h-5" /> },
   { name: "Đơn hàng", href: "/orders", icon: <Package className="w-5 h-5" /> },
-  { name: "Báo cáo", href: "/reports", icon: <BarChart3 className="w-5 h-5" /> },
   { name: "Nhân viên", href: "/employees", icon: <Users className="w-5 h-5" /> },
   { name: "Cài đặt", href: "/settings", icon: <Settings className="w-5 h-5" /> },
 ];

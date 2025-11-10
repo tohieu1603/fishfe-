@@ -12,11 +12,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2 } from "lucide-react";
-import { orderApi } from "@/lib/api";
+import { Plus, Trash2, X } from "lucide-react";
+import { orderApi, authApi } from "@/lib/api";
 import { toast } from "sonner";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
-import { Order } from "@/types";
+import { Order, User } from "@/types";
 
 interface CreateOrderDialogProps {
   open: boolean;
@@ -63,6 +63,23 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess, editMode = fa
 
   // Employee assignment states
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+
+  // Load available users
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const users = await authApi.getUsers();
+        setAvailableUsers(users);
+      } catch (error) {
+        console.error("Failed to load users:", error);
+      }
+    };
+    if (open) {
+      loadUsers();
+    }
+  }, [open]);
 
   // Auto-select current user when dialog opens
   useEffect(() => {
@@ -346,6 +363,107 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess, editMode = fa
                 placeholder="Ghi chú đặc biệt cho đơn hàng..."
               />
             </div>
+
+            {/* Assigned Users */}
+            <div className="space-y-1.5">
+              <Label className="text-xs md:text-sm font-medium">Giao cho</Label>
+
+              {/* Search input */}
+              <div className="relative">
+                <Input
+                  type="text"
+                  placeholder="Tìm kiếm nhân viên..."
+                  value={userSearchQuery}
+                  onChange={(e) => setUserSearchQuery(e.target.value)}
+                  className="h-9 md:h-10 text-sm pr-8"
+                />
+                {userSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setUserSearchQuery("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Dropdown list */}
+              <div className="max-h-48 overflow-y-auto border rounded-md bg-white">
+                {availableUsers
+                  .filter((user) => {
+                    const searchLower = userSearchQuery.toLowerCase();
+                    return (
+                      user.full_name?.toLowerCase().includes(searchLower) ||
+                      user.username.toLowerCase().includes(searchLower) ||
+                      user.email?.toLowerCase().includes(searchLower)
+                    );
+                  })
+                  .map((user) => {
+                    const isSelected = selectedUserIds.includes(user.id);
+                    return (
+                      <button
+                        key={user.id}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedUserIds(selectedUserIds.filter(id => id !== user.id));
+                          } else {
+                            setSelectedUserIds([...selectedUserIds, user.id]);
+                          }
+                        }}
+                        className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${
+                          isSelected ? 'bg-amber-50' : ''
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                          isSelected ? 'bg-amber-500 border-amber-500' : 'border-gray-300'
+                        }`}>
+                          {isSelected && <X className="h-3 w-3 text-white" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-gray-900 truncate">
+                            {user.full_name || user.username}
+                          </div>
+                          {user.email && (
+                            <div className="text-xs text-gray-500 truncate">{user.email}</div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+              </div>
+
+              {/* Selected users tags */}
+              {selectedUserIds.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {selectedUserIds.map((userId) => {
+                    const user = availableUsers.find(u => u.id === userId);
+                    if (!user) return null;
+                    return (
+                      <span
+                        key={userId}
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-full"
+                      >
+                        {user.full_name || user.username}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedUserIds(selectedUserIds.filter(id => id !== userId))}
+                          className="hover:bg-amber-200 rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+
+              {selectedUserIds.length === 0 && (
+                <p className="text-xs text-gray-500">Chọn ít nhất một người để giao đơn hàng</p>
+              )}
+            </div>
+
             <div className="space-y-1.5">
               <Label htmlFor="receivedTime" className="text-xs md:text-sm font-medium">Thời gian nhận hàng</Label>
               <Input
