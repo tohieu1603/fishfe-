@@ -23,7 +23,7 @@ interface OrderDetailPageProps {
   onClose: () => void;
 }
 
-// Helper function to get full image URL with proper encoding
+// Helper function to get full image URL
 const getImageUrl = (imagePath: string): string => {
   if (!imagePath) return "";
   // If already a full URL, return as is
@@ -37,26 +37,14 @@ const getImageUrl = (imagePath: string): string => {
   // Get backend base URL
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-  // Encode the path properly (encode each path segment separately to preserve slashes)
-  const pathSegments = cleanPath.split('/');
-  const encodedPath = pathSegments.map(segment => encodeURIComponent(segment)).join('/');
-
   // Build final URL - backend serves media files at /media/
+  // NOTE: Do NOT encode - Nginx expects raw UTF-8 URLs
   let finalUrl;
   if (cleanPath.startsWith("media/")) {
-    finalUrl = `${apiUrl}/${encodedPath}`;
+    finalUrl = `${apiUrl}/${cleanPath}`;
   } else {
-    finalUrl = `${apiUrl}/media/${encodedPath}`;
+    finalUrl = `${apiUrl}/media/${cleanPath}`;
   }
-
-  // Debug log
-  console.log("Image URL Debug:", {
-    originalPath: imagePath,
-    cleanPath,
-    encodedPath,
-    apiUrl,
-    finalUrl
-  });
 
   return finalUrl;
 };
