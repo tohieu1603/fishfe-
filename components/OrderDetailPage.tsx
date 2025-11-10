@@ -26,27 +26,23 @@ interface OrderDetailPageProps {
 // Helper function to get full image URL
 const getImageUrl = (imagePath: string): string => {
   if (!imagePath) return "";
+
   // If already a full URL, return as is
   if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
     return imagePath;
   }
 
-  // Remove leading slash if present
-  const cleanPath = imagePath.startsWith("/") ? imagePath.slice(1) : imagePath;
-
-  // Get backend base URL
+  // Backend now returns pre-encoded URLs like /media/orders/2025/11/10/filename.png
+  // Just prepend the domain
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-  // Build final URL - backend serves media files at /media/
-  // NOTE: Do NOT encode - Nginx expects raw UTF-8 URLs
-  let finalUrl;
-  if (cleanPath.startsWith("media/")) {
-    finalUrl = `${apiUrl}/${cleanPath}`;
-  } else {
-    finalUrl = `${apiUrl}/media/${cleanPath}`;
+  // If path starts with /, just append to domain
+  if (imagePath.startsWith("/")) {
+    return `${apiUrl}${imagePath}`;
   }
 
-  return finalUrl;
+  // Otherwise add leading slash
+  return `${apiUrl}/${imagePath}`;
 };
 
 export function OrderDetailPage({ orderId, onClose }: OrderDetailPageProps) {
