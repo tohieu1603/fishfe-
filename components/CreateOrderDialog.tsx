@@ -175,6 +175,8 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess, editMode = fa
         shipping_fee: shippingFee,
         chip_fee: 0,
         notes: notes || undefined,
+        received_time: receivedTime || undefined,
+        kitchen_time: kitchenTime || undefined,
         delivery_time: deliveryTime || undefined,
         assigned_to_ids: selectedUserIds,
       };
@@ -342,6 +344,26 @@ export function CreateOrderDialog({ open, onOpenChange, onSuccess, editMode = fa
                 rows={3}
                 className="flex w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                 placeholder="Ghi chú đặc biệt cho đơn hàng..."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="receivedTime" className="text-xs md:text-sm font-medium">Thời gian nhận hàng</Label>
+              <Input
+                id="receivedTime"
+                type="datetime-local"
+                value={receivedTime}
+                onChange={(e) => setReceivedTime(e.target.value)}
+                className="h-9 md:h-10 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="kitchenTime" className="text-xs md:text-sm font-medium">Thời gian vào bếp</Label>
+              <Input
+                id="kitchenTime"
+                type="datetime-local"
+                value={kitchenTime}
+                onChange={(e) => setKitchenTime(e.target.value)}
+                className="h-9 md:h-10 text-sm"
               />
             </div>
             <div className="space-y-1.5">

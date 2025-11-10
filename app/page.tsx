@@ -44,16 +44,16 @@ function HomePage() {
     return `${year}-${month}-${day}`;
   };
 
-  // Initialize with today's date by default
+  // Initialize with all orders by default
   const today = getLocalDateString(new Date());
   const [localFilters, setLocalFilters] = useState({
     search: "",
     status: undefined as OrderStatus | undefined,
     myOrders: false,
-    dateFrom: today as string | undefined,
-    dateTo: today as string | undefined,
+    dateFrom: undefined as string | undefined,
+    dateTo: undefined as string | undefined,
   });
-  const [quickFilterLabel, setQuickFilterLabel] = useState<string>("Hôm nay");
+  const [quickFilterLabel, setQuickFilterLabel] = useState<string>("Tất cả");
   const [showTransitionDialog, setShowTransitionDialog] = useState(false);
   const [pendingTransition, setPendingTransition] = useState<{
     order: Order;

@@ -34,7 +34,9 @@ const getImageUrl = (imagePath: string): string => {
   const cleanPath = imagePath.startsWith("/") ? imagePath.slice(1) : imagePath;
   // Get backend base URL (without /api)
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-  const baseUrl = apiUrl.replace("/api", "");
+  // Replace /backend with /be if present
+  let baseUrl = apiUrl.replace("/api", "");
+  baseUrl = baseUrl.replace("/backend", "/be");
   // If path already starts with media/, don't add it again
   if (cleanPath.startsWith("media/")) {
     return `${baseUrl}/${cleanPath}`;
