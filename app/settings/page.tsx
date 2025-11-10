@@ -3,6 +3,7 @@
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { CleanupImagesDialog } from "@/components/CleanupImagesDialog";
 
 function SettingsPage() {
   const { user } = useAuth();
@@ -36,6 +37,21 @@ function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Admin Only - Storage Management */}
+      {user?.role === "admin" && (
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">Quản lý dung lượng (Admin)</h2>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-600 mb-3">
+                Xóa các ảnh đơn hàng cũ để tiết kiệm dung lượng server
+              </p>
+              <CleanupImagesDialog />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold mb-4">Cài đặt hệ thống</h2>

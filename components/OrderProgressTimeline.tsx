@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Clock, Circle, ChevronRight } from "lucide-react";
+import { AlertTriangle, Clock, Circle, ChevronRight, XCircle, CheckCircle } from "lucide-react";
 import { Order, OrderStatus } from "@/types";
 import { PROCESS_STAGES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,16 @@ interface OrderProgressTimelineProps {
 }
 
 export function OrderProgressTimeline({ order, onTransition }: OrderProgressTimelineProps) {
-  const currentIndex = PROCESS_STAGES.findIndex((s) => s.status === order.status);
-
   // Check if order is completed or failed
   const isCompleted = order.status === OrderStatus.COMPLETED;
   const isFailed = order.status === OrderStatus.FAILED;
+
+  // Get all stages including the failed stage if order failed
+  const allStages = isFailed
+    ? [...PROCESS_STAGES.filter(s => s.status !== OrderStatus.COMPLETED), { ...PROCESS_STAGES.find(s => s.status === OrderStatus.FAILED)!, label: "Đã hủy" }]
+    : PROCESS_STAGES.filter(s => s.status !== OrderStatus.COMPLETED && s.status !== OrderStatus.FAILED);
+
+  const currentIndex = allStages.findIndex((s) => s.status === order.status);
 
   // Get next status for transition button
   const nextStatus = currentIndex >= 0 && currentIndex < PROCESS_STAGES.length - 1
@@ -23,7 +28,7 @@ export function OrderProgressTimeline({ order, onTransition }: OrderProgressTime
     : null;
 
   // Calculate time spent at each stage
-  const getStageTime = (status: OrderStatus): { minutes: number; isOverdue: boolean; deadline?: Date } => {
+  const getStageTime = (status: OrderStatus): { minutes: number; isOverdue: boolean; deadline?: Date; timestamp?: Date } => {
     const history = order.status_history || [];
 
     // Find when this status started
@@ -47,16 +52,19 @@ export function OrderProgressTimeline({ order, onTransition }: OrderProgressTime
       minutes,
       isOverdue: minutes > threshold,
       deadline: new Date(startTime.getTime() + threshold * 60 * 1000),
+      timestamp: startTime,
     };
   };
 
   // Calculate progress percentage
-  const totalStages = PROCESS_STAGES.filter(s => s.status !== OrderStatus.COMPLETED && s.status !== OrderStatus.FAILED).length;
-  const progressPercentage = isCompleted ? 100 : isFailed ? 0 : Math.round(((currentIndex + 1) / totalStages) * 100);
+  const totalStages = allStages.length;
+  const progressPercentage = isCompleted
+    ? 100
+    : isFailed
+      ? Math.round((currentIndex / totalStages) * 100)
+      : Math.round(((currentIndex + 1) / totalStages) * 100);
 
-  const filteredStages = PROCESS_STAGES.filter(stage =>
-    stage.status !== OrderStatus.COMPLETED && stage.status !== OrderStatus.FAILED
-  );
+  const filteredStages = allStages;
 
   return (
     <div className="space-y-4">
@@ -123,15 +131,22 @@ export function OrderProgressTimeline({ order, onTransition }: OrderProgressTime
               >
                 {/* Status Icon */}
                 <div className="flex-shrink-0 mt-0.5">
-                  {isPast ? (
+                  {isFailed && isCurrent ? (
+                    // Failed state - red X
+                    <div className="relative flex items-center justify-center">
+                      <div className="h-6 w-6 rounded-full bg-red-600 flex items-center justify-center">
+                        <XCircle className="h-4 w-4 text-white" />
+                      </div>
+                    </div>
+                  ) : isPast ? (
+                    // Completed stage - green check
                     <div className="relative flex items-center justify-center">
                       <div className="h-6 w-6 rounded-full bg-green-600 flex items-center justify-center">
-                        <svg className="h-4 w-4 text-white font-bold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
+                        <CheckCircle className="h-4 w-4 text-white" />
                       </div>
                     </div>
                   ) : isCurrent ? (
+                    // Current stage
                     stageTime?.isOverdue ? (
                       <div className="relative">
                         <Circle className="h-6 w-6 text-red-600 fill-red-100" />
@@ -141,6 +156,7 @@ export function OrderProgressTimeline({ order, onTransition }: OrderProgressTime
                       <Circle className="h-6 w-6 text-blue-600 fill-blue-100 animate-pulse" />
                     )
                   ) : (
+                    // Future stage
                     <Circle className="h-6 w-6 text-gray-300" />
                   )}
                 </div>
@@ -163,15 +179,24 @@ export function OrderProgressTimeline({ order, onTransition }: OrderProgressTime
                     </h4>
 
                     {(isPast || isCurrent) && stageTime && (
-                      <div
-                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                          stageTime.isOverdue
-                            ? "bg-red-100 text-red-700"
-                            : "bg-green-100 text-green-700"
-                        }`}
-                      >
-                        <Clock className="h-3 w-3" />
-                        <span>{stageTime.minutes} phút</span>
+                      <div className="flex flex-col items-end gap-1">
+                        <div
+                          className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                            isFailed && isCurrent
+                              ? "bg-red-100 text-red-700"
+                              : stageTime.isOverdue
+                                ? "bg-red-100 text-red-700"
+                                : "bg-green-100 text-green-700"
+                          }`}
+                        >
+                          <Clock className="h-3 w-3" />
+                          <span>{stageTime.minutes} phút</span>
+                        </div>
+                        {stageTime.timestamp && (
+                          <span className="text-[10px] text-gray-500">
+                            {stageTime.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
